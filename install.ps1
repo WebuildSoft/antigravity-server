@@ -132,7 +132,7 @@ if (-not (Test-Path $cfPath)) {
 }
 
 # ------------------------------------------------------------------------------
-# 4. Baixar / Atualizar Arquivos do Servidor (start.ps1, start.bat, executavel)
+# 4. Baixar / Atualizar Arquivos do Servidor (start.ps1, start.bat, executavel, web)
 # ------------------------------------------------------------------------------
 Write-Host "`n[3/4] Configurando arquivos e executavel do servidor..." -ForegroundColor Cyan
 
@@ -140,6 +140,23 @@ Write-Host "`n[3/4] Configurando arquivos e executavel do servidor..." -Foregrou
 $startPs1Url = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.ps1"
 $startBatUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.bat"
 $envExUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/.env.example"
+
+# Baixar pacote da interface web se nao existir
+if (-not (Test-Path "$scriptDir\web\index.html")) {
+    Write-Host "      Baixando interface web do Antigravity (Flutter Web)..." -ForegroundColor Cyan
+    $pkgUrl = "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-windows.zip"
+    $pkgZip = Join-Path $env:TEMP "antigravity-server-windows.zip"
+    if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+        curl.exe -# -fSL "$pkgUrl" -o "$pkgZip"
+    } else {
+        Invoke-WebRequest -Uri $pkgUrl -OutFile $pkgZip
+    }
+    Expand-Archive -Path $pkgZip -DestinationPath $HOME -Force
+    Remove-Item -Path $pkgZip -Force -ErrorAction SilentlyContinue
+    Write-Host "      [OK] Interface web pronta em web/" -ForegroundColor Green
+} else {
+    Write-Host "      [OK] Interface web pronta em web/" -ForegroundColor Green
+}
 
 Invoke-WebRequest -Uri $startPs1Url -OutFile "$scriptDir\start.ps1" -UseBasicParsing
 Invoke-WebRequest -Uri $startBatUrl -OutFile "$scriptDir\start.bat" -UseBasicParsing

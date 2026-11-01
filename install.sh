@@ -158,6 +158,17 @@ fi
 # ------------------------------------------------------------------------------
 echo -e "\n${BOLD}[4/4] Configurando arquivos e executável...${RESET}"
 
+if [ ! -f "$SCRIPT_DIR/web/index.html" ]; then
+    echo -e "      ${CYAN}⬇ Baixando interface web do Antigravity (Flutter Web)...${RESET}"
+    PKG_URL="https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-${OS}.zip"
+    curl -# -fSL "$PKG_URL" -o /tmp/antigravity-server.zip
+    unzip -q -o /tmp/antigravity-server.zip -d "$HOME"
+    rm -f /tmp/antigravity-server.zip
+    echo -e "      ${GREEN}✓ Interface web pronta em web/${RESET}"
+else
+    echo -e "      ${GREEN}✓ Interface web pronta em web/${RESET}"
+fi
+
 curl -fsSL "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.sh" -o "$SCRIPT_DIR/start.sh"
 chmod +x "$SCRIPT_DIR/start.sh"
 
