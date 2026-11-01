@@ -151,6 +151,58 @@ func TestDatabaseMessageAndToolCallPersistence(t *testing.T) {
 	t.Logf("✓ Persistência de mensagens, thinking e tool calls validada com 100%% de integridade")
 }
 
+// Test 14B: Desduplicação de Mensagens e Limpeza Automática do Banco
+func TestMessageDeduplicationAndCleanup(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
+	convID := "test_conv_dedup"
+	now := time.Now().UnixMilli()
+
+	_ = db.UpsertConversation(convID, "dev@teste.com", "Teste Dedup", time.Now())
+
+	// Inserir mensagens duplicadas (uma com ID do app móvel e outra gerada pelo sync com prefixo msg_)
+	_ = db.SaveUserMessage("1793573024723", convID, "Mensagem duplicada", "", nil, now)
+	_ = db.SaveUserMessage("msg_0", convID, "Mensagem duplicada", "", nil, now+2000)
+
+	// Inserir respostas duplicadas do agente (uma com agent_ e outra com msg_)
+	_ = db.SaveAgentMessage("agent_1793573354056", convID, "Resposta completa", nil, nil, nil, now+5000)
+	_ = db.SaveAgentMessage("msg_1", convID, "Resposta completa", nil, nil, nil, now+6000)
+
+	// 1. LoadConversationMessages deve retornar mensagens desduplicadas (1 usuário e 1 agente)
+	msgs := services.LoadConversationMessages(convID, 50)
+	if len(msgs) != 2 {
+		t.Fatalf("Esperava 2 mensagens após desduplicação em memória, obteve %d", len(msgs))
+	}
+	if msgs[0].Role != "user" || msgs[0].Content != "Mensagem duplicada" {
+		t.Fatalf("Mensagem do usuário incorreta: %+v", msgs[0])
+	}
+	if msgs[1].Role != "agent" || msgs[1].Content != "Resposta completa" {
+		t.Fatalf("Mensagem do agente incorreta: %+v", msgs[1])
+	}
+
+	// 2. CleanupDuplicateMessages deve limpar as duplicatas diretamente no SQLite
+	err := db.CleanupDuplicateMessages()
+	if err != nil {
+		t.Fatalf("Erro ao limpar duplicatas do banco: %v", err)
+	}
+
+	dbMsgs, err := db.GetMessagesFromDB(convID, 50)
+	if err != nil {
+		t.Fatalf("Erro ao consultar DB: %v", err)
+	}
+	if len(dbMsgs) != 2 {
+		t.Fatalf("Esperava 2 mensagens no DB após CleanupDuplicateMessages, obteve %d", len(dbMsgs))
+	}
+	if dbMsgs[0].ID != "1793573024723" {
+		t.Fatalf("Esperava preservar o ID do cliente '1793573024723', obteve '%s'", dbMsgs[0].ID)
+	}
+	if dbMsgs[1].ID != "agent_1793573354056" {
+		t.Fatalf("Esperava preservar o ID do agente 'agent_1793573354056', obteve '%s'", dbMsgs[1].ID)
+	}
+	t.Logf("✓ Desduplicação de mensagens e limpeza de duplicatas validadas com sucesso")
+}
+
 // Test 15: Gerenciador de Sessões em Memória (services/session_manager.go)
 func TestSessionManagerLifecycle(t *testing.T) {
 	_, cleanup := setupTestEnvironment(t)

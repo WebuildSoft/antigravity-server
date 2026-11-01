@@ -73,6 +73,32 @@ func mapDBMessagesToChatMessages(records []db.MessageRecord) []ChatMessage {
 	return messages
 }
 
+func deduplicateChatMessages(msgs []ChatMessage) []ChatMessage {
+	if len(msgs) <= 1 {
+		return msgs
+	}
+	result := make([]ChatMessage, 0, len(msgs))
+	for _, m := range msgs {
+		if len(result) > 0 {
+			prev := result[len(result)-1]
+			// Deduplicate consecutive messages with same role and content
+			if prev.Role == m.Role && strings.TrimSpace(prev.Content) == strings.TrimSpace(m.Content) && strings.TrimSpace(m.Content) != "" {
+				// If current message has client/server ID (not starting with msg_) and prev has msg_, prefer current
+				if !strings.HasPrefix(m.ID, "msg_") && strings.HasPrefix(prev.ID, "msg_") {
+					result[len(result)-1] = m
+				}
+				continue
+			}
+			// Skip empty agent message without tool calls
+			if m.Role == "agent" && strings.TrimSpace(m.Content) == "" && len(m.ToolCalls) == 0 {
+				continue
+			}
+		}
+		result = append(result, m)
+	}
+	return result
+}
+
 func LoadConversationMessages(convID string, limit int) []ChatMessage {
 	transcriptPath := filepath.Join(config.AppConfig.BrainDir, convID, ".system_generated/logs/transcript.jsonl")
 	if fi, err := os.Stat(transcriptPath); err == nil {
@@ -85,14 +111,14 @@ func LoadConversationMessages(convID string, limit int) []ChatMessage {
 	// 1. Try SQLite first (ultra fast <2ms)
 	dbMsgs, err := db.GetMessagesFromDB(convID, limit)
 	if err == nil && len(dbMsgs) > 0 {
-		return mapDBMessagesToChatMessages(dbMsgs)
+		return deduplicateChatMessages(mapDBMessagesToChatMessages(dbMsgs))
 	}
 
 	// 2. If not found in SQLite, import from legacy transcript into SQLite
 	db.ImportSingleConversationTranscript(convID)
 	dbMsgs, err = db.GetMessagesFromDB(convID, limit)
 	if err == nil && len(dbMsgs) > 0 {
-		return mapDBMessagesToChatMessages(dbMsgs)
+		return deduplicateChatMessages(mapDBMessagesToChatMessages(dbMsgs))
 	}
 
 	// 3. Fallback to parsing transcript directly if SQLite failed
@@ -290,6 +316,7 @@ func LoadConversationMessages(convID string, limit int) []ChatMessage {
 		}
 	}
 
+	messages = deduplicateChatMessages(messages)
 	if limit > 0 && len(messages) > limit {
 		return messages[len(messages)-limit:]
 	}

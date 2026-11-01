@@ -33,7 +33,60 @@ func InitDB() error {
 		return err
 	}
 
+	if err := CleanupDuplicateMessages(); err != nil {
+		fmt.Printf("[DB] Warning during duplicate cleanup: %v\n", err)
+	}
+
 	fmt.Printf("[DB] SQLite database initialized successfully at: %s\n", dbPath)
+	return nil
+}
+
+func CleanupDuplicateMessages() error {
+	// Clean duplicate user messages (where a client-generated ID already exists)
+	userRes, err := DB.Exec(`
+		DELETE FROM messages 
+		WHERE role = 'user' 
+		  AND id LIKE 'msg_%' 
+		  AND EXISTS (
+		    SELECT 1 FROM messages m2 
+		    WHERE m2.conversation_id = messages.conversation_id 
+		      AND m2.role = 'user' 
+		      AND m2.content = messages.content 
+		      AND m2.id != messages.id 
+		      AND m2.id NOT LIKE 'msg_%'
+		  );
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Clean duplicate agent messages (where a server-generated agent_ ID already exists)
+	agentRes, err := DB.Exec(`
+		DELETE FROM messages 
+		WHERE role = 'agent' 
+		  AND id LIKE 'msg_%' 
+		  AND EXISTS (
+		    SELECT 1 FROM messages m2 
+		    WHERE m2.conversation_id = messages.conversation_id 
+		      AND m2.role = 'agent' 
+		      AND m2.id != messages.id 
+		      AND m2.id LIKE 'agent_%'
+		      AND (
+		        m2.content = messages.content 
+		        OR messages.content = '' 
+		        OR (length(messages.content) > 30 AND substr(m2.content, 1, 30) = substr(messages.content, 1, 30))
+		      )
+		  );
+	`)
+	if err != nil {
+		return err
+	}
+
+	userDeleted, _ := userRes.RowsAffected()
+	agentDeleted, _ := agentRes.RowsAffected()
+	if userDeleted > 0 || agentDeleted > 0 {
+		fmt.Printf("[DB] Cleaned up duplicate messages: %d user, %d agent\n", userDeleted, agentDeleted)
+	}
 	return nil
 }
 

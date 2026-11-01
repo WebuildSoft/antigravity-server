@@ -119,7 +119,19 @@ func ImportSingleConversationTranscript(convID string) {
 
 	flushAgent := func() {
 		if currentAgentMsgID != "" {
-			_ = SaveAgentMessage(currentAgentMsgID, convID, currentAgentContent, currentAgentThinking, currentAgentImg, currentAgentTCs, currentAgentTime)
+			// Check if this agent message already exists in DB (e.g. saved by agent_parser in real-time)
+			var existingAgentMsgID string
+			_ = DB.QueryRow(`
+				SELECT id FROM messages 
+				WHERE conversation_id = ? AND role = 'agent' 
+				  AND (content = ? OR (length(content) > 30 AND length(?) > 30 AND substr(content, 1, 30) = substr(?, 1, 30)) OR content = '')
+				  AND ABS(strftime('%s', created_at) - ?) < 300
+				LIMIT 1
+			`, convID, currentAgentContent, currentAgentContent, currentAgentContent, currentAgentTime/1000).Scan(&existingAgentMsgID)
+
+			if existingAgentMsgID == "" {
+				_ = SaveAgentMessage(currentAgentMsgID, convID, currentAgentContent, currentAgentThinking, currentAgentImg, currentAgentTCs, currentAgentTime)
+			}
 			currentAgentMsgID = ""
 			currentAgentContent = ""
 			currentAgentThinking = nil
@@ -184,7 +196,19 @@ func ImportSingleConversationTranscript(convID string) {
 				stepIdx = int(s)
 			}
 			msgID := fmt.Sprintf("msg_%d", stepIdx)
-			_ = SaveUserMessage(msgID, convID, text, firstImage, imageUrls, timestamp)
+
+			// Check if this user message already exists in DB (e.g. saved by agent_runner with client-generated ID)
+			var existingUserMsgID string
+			_ = DB.QueryRow(`
+				SELECT id FROM messages 
+				WHERE conversation_id = ? AND role = 'user' AND content = ? 
+				  AND ABS(strftime('%s', created_at) - ?) < 300
+				LIMIT 1
+			`, convID, text, timestamp/1000).Scan(&existingUserMsgID)
+
+			if existingUserMsgID == "" {
+				_ = SaveUserMessage(msgID, convID, text, firstImage, imageUrls, timestamp)
+			}
 
 		} else if source == "MODEL" && itemType == "PLANNER_RESPONSE" {
 			stepIdx := 0
