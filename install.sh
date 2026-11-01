@@ -204,6 +204,21 @@ fi
 chmod +x "$SCRIPT_DIR/start.sh" 2>/dev/null || true
 if [ -f "$SCRIPT_DIR/antigravity-server" ]; then
     chmod +x "$SCRIPT_DIR/antigravity-server"
+    if [ "$SCRIPT_DIR" = "$HOME/antigravity-server" ]; then
+        DEV_FILES=(
+            "main.go" "go.mod" "go.sum" "test-dev.sh" "install.ps1" "start.ps1" "install.bat" "start.bat"
+            "CHANGELOG.md" "SECURITY_CHANGES_AND_CLIENT_CONFIG.md"
+            "bin/antigravity-server-windows-amd64.exe"
+            "bin/antigravity-server-linux-amd64"
+            "bin/antigravity-server-linux-arm64"
+            "bin/antigravity-server-darwin-amd64"
+            "bin/antigravity-server-darwin-arm64"
+        )
+        for f in "${DEV_FILES[@]}"; do
+            rm -f "$SCRIPT_DIR/$f" 2>/dev/null || true
+        done
+        rm -rf "$SCRIPT_DIR/auth" "$SCRIPT_DIR/config" "$SCRIPT_DIR/db" "$SCRIPT_DIR/gateway" "$SCRIPT_DIR/services" "$SCRIPT_DIR/scripts" "$SCRIPT_DIR/tests" 2>/dev/null || true
+    fi
 fi
 
 echo -e "\n${BOLD}${GREEN}============================================================"

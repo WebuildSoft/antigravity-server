@@ -182,6 +182,30 @@ if (-not (Test-Path $serverExe)) {
     }
 }
 
+# ------------------------------------------------------------------------------
+# 5. Limpeza de Arquivos de Desenvolvimento (Mantendo apenas o essencial)
+# ------------------------------------------------------------------------------
+if ((Test-Path $serverExe) -and ($scriptDir -eq (Join-Path $HOME "antigravity-server"))) {
+    $devFiles = @(
+        "main.go", "go.mod", "go.sum", "test-dev.sh", "install.sh", "start.sh",
+        "CHANGELOG.md", "SECURITY_CHANGES_AND_CLIENT_CONFIG.md",
+        "bin\antigravity-server-linux-amd64",
+        "bin\antigravity-server-linux-arm64",
+        "bin\antigravity-server-darwin-amd64",
+        "bin\antigravity-server-darwin-arm64",
+        "bin\antigravity-server-windows-amd64.exe"
+    )
+    foreach ($f in $devFiles) {
+        $p = Join-Path $scriptDir $f
+        if (Test-Path $p) { Remove-Item $p -Force -ErrorAction SilentlyContinue }
+    }
+    $devDirs = @("auth", "config", "db", "gateway", "services", "scripts", "tests")
+    foreach ($d in $devDirs) {
+        $p = Join-Path $scriptDir $d
+        if (Test-Path $p) { Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+}
+
 Write-Host "`n============================================================" -ForegroundColor Green
 Write-Host "    INSTALACAO NO WINDOWS CONCLUIDA COM SUCESSO!            " -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
