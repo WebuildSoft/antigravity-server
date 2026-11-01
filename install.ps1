@@ -3,37 +3,28 @@
 # ==============================================================================
 $ErrorActionPreference = "Stop"
 
-$BOLD = "`e[1m"
-$GREEN = "`e[32m"
-$YELLOW = "`e[33m"
-$CYAN = "`e[36m"
-$RED = "`e[31m"
-$RESET = "`e[0m"
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host "    INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE (WINDOWS)     " -ForegroundColor Cyan
+Write-Host "============================================================" -ForegroundColor Cyan
 
-Write-Host "${BOLD}${CYAN}"
-Write-Host "============================================================"
-Write-Host "    🚀 INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE (WINDOWS)   "
-Write-Host "============================================================"
-Write-Host "${RESET}"
-
-# 1. Definir diretório de instalação
+# 1. Definir diretorio de instalacao
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir -or -not (Test-Path "$scriptDir\go.mod")) {
     $scriptDir = Join-Path $HOME "antigravity-server"
-    Write-Host "${CYAN}📦 Repositório não detectado na pasta atual.${RESET}"
+    Write-Host "Repositorio nao detectado na pasta atual." -ForegroundColor Cyan
     if (Test-Path "$scriptDir\.git") {
-        Write-Host "${CYAN}🔄 Atualizando repositório existente em: $scriptDir...${RESET}"
+        Write-Host "Atualizando repositorio existente em: $scriptDir..." -ForegroundColor Cyan
         Push-Location $scriptDir
         try { git pull --quiet origin main } catch {}
         Pop-Location
     } elseif (Test-Path "$scriptDir\go.mod") {
-        Write-Host "${GREEN}✓ Pasta do repositório já encontrada em: $scriptDir${RESET}"
+        Write-Host "[OK] Pasta do repositorio ja encontrada em: $scriptDir" -ForegroundColor Green
     } else {
-        Write-Host "${CYAN}⬇ Baixando repositório oficial em: $scriptDir...${RESET}"
+        Write-Host "Baixando repositorio oficial em: $scriptDir..." -ForegroundColor Cyan
         if (Get-Command git -ErrorAction SilentlyContinue) {
             git clone --quiet https://github.com/WebuildSoft/antigravity-server.git $scriptDir
         } else {
-            Write-Host "${YELLOW}Git não encontrado. Baixando arquivos compactados...${RESET}"
+            Write-Host "Git nao encontrado. Baixando arquivos compactados..." -ForegroundColor Yellow
             $zipPath = Join-Path $env:TEMP "antigravity-server.zip"
             Invoke-WebRequest -Uri "https://github.com/WebuildSoft/antigravity-server/archive/refs/heads/main.zip" -OutFile $zipPath
             Expand-Archive -Path $zipPath -DestinationPath $env:TEMP -Force
@@ -51,7 +42,7 @@ New-Item -ItemType Directory -Force -Path "$scriptDir\bin", "$scriptDir\data", "
 # ------------------------------------------------------------------------------
 # 2. Verificar Antigravity CLI ('agy')
 # ------------------------------------------------------------------------------
-Write-Host "`n${BOLD}[1/4] Verificando Antigravity CLI ('agy')...${RESET}"
+Write-Host "`n[1/4] Verificando Antigravity CLI ('agy')..." -ForegroundColor Cyan
 $agyPath = $null
 if (Get-Command agy.exe -ErrorAction SilentlyContinue) {
     $agyPath = (Get-Command agy.exe).Source
@@ -77,64 +68,64 @@ if (Get-Command agy.exe -ErrorAction SilentlyContinue) {
 }
 
 if ($agyPath) {
-    Write-Host "      ${GREEN}✓ agy encontrado:${RESET} $agyPath"
+    Write-Host "      [OK] agy encontrado: $agyPath" -ForegroundColor Green
 } else {
-    Write-Host "      ${YELLOW}! Antigravity CLI ('agy') não encontrado no PATH.${RESET}"
-    Write-Host "      ${CYAN}💡 Se você ainda não instalou o agy no Windows, certifique-se de instalar o Antigravity CLI.${RESET}"
+    Write-Host "      [!] Antigravity CLI ('agy') nao encontrado no PATH." -ForegroundColor Yellow
+    Write-Host "      Dica: Se voce ainda nao instalou o agy no Windows, certifique-se de instalar o Antigravity CLI." -ForegroundColor Cyan
 }
 
 # ------------------------------------------------------------------------------
 # 3. Baixar ou Verificar Cloudflare Tunnel (cloudflared.exe)
 # ------------------------------------------------------------------------------
-Write-Host "`n${BOLD}[2/4] Verificando Cloudflare Tunnel (cloudflared)...${RESET}"
+Write-Host "`n[2/4] Verificando Cloudflare Tunnel (cloudflared)..." -ForegroundColor Cyan
 $cfPath = "$scriptDir\bin\cloudflared.exe"
 if (-not (Test-Path $cfPath)) {
     if (Get-Command cloudflared.exe -ErrorAction SilentlyContinue) {
         $sysCf = (Get-Command cloudflared.exe).Source
-        Write-Host "      ${GREEN}✓ cloudflared do sistema encontrado:${RESET} $sysCf"
+        Write-Host "      [OK] cloudflared do sistema encontrado: $sysCf" -ForegroundColor Green
         Copy-Item $sysCf $cfPath -Force
     } else {
-        Write-Host "      ${YELLOW}! Baixando binário oficial seguro do Cloudflare Tunnel...${RESET}"
+        Write-Host "      [!] Baixando binario oficial seguro do Cloudflare Tunnel..." -ForegroundColor Yellow
         $cfUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
         Invoke-WebRequest -Uri $cfUrl -OutFile $cfPath -UseBasicParsing
-        Write-Host "      ${GREEN}✓ cloudflared baixado com sucesso em bin\cloudflared.exe${RESET}"
+        Write-Host "      [OK] cloudflared baixado com sucesso em bin\cloudflared.exe" -ForegroundColor Green
     }
 } else {
-    Write-Host "      ${GREEN}✓ cloudflared local encontrado em:${RESET} $cfPath"
+    Write-Host "      [OK] cloudflared local encontrado em: $cfPath" -ForegroundColor Green
 }
 
 # ------------------------------------------------------------------------------
-# 4. Configurar Arquivo .env e Binário Executável
+# 4. Configurar Arquivo .env e Binario Executavel
 # ------------------------------------------------------------------------------
-Write-Host "`n${BOLD}[3/4] Configurando arquivos e executável...${RESET}"
+Write-Host "`n[3/4] Configurando arquivos e executavel..." -ForegroundColor Cyan
 if (-not (Test-Path "$scriptDir\.env") -and (Test-Path "$scriptDir\.env.example")) {
     Copy-Item "$scriptDir\.env.example" "$scriptDir\.env"
-    Write-Host "      ${GREEN}✓ Arquivo .env criado a partir de .env.example${RESET}"
+    Write-Host "      [OK] Arquivo .env criado a partir de .env.example" -ForegroundColor Green
 }
 
 $serverExe = "$scriptDir\antigravity-server.exe"
 if (-not (Test-Path $serverExe)) {
     $prebuilt = "$scriptDir\bin\antigravity-server-windows-amd64.exe"
     if (Test-Path $prebuilt) {
-        Write-Host "      ${GREEN}✓ Utilizando binário pré-compilado para Windows x64${RESET}"
+        Write-Host "      [OK] Utilizando binario pre-compilado para Windows x64" -ForegroundColor Green
         Copy-Item $prebuilt $serverExe -Force
     } elseif (Get-Command go -ErrorAction SilentlyContinue) {
-        Write-Host "      ${CYAN}Compilando antigravity-server via Go local...${RESET}"
+        Write-Host "      Compilando antigravity-server via Go local..." -ForegroundColor Cyan
         go build -ldflags="-s -w" -o $serverExe .
     } else {
-        Write-Host "      ${CYAN}Baixando executável do servidor direto do repositório...${RESET}"
+        Write-Host "      Baixando executavel do servidor direto do repositorio..." -ForegroundColor Cyan
         $repoExeUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-windows-amd64.exe"
         Invoke-WebRequest -Uri $repoExeUrl -OutFile $serverExe -UseBasicParsing
     }
 }
 
-Write-Host "`n${BOLD}${GREEN}============================================================"
-Write-Host "    🎉 INSTALAÇÃO NO WINDOWS CONCLUÍDA COM SUCESSO!         "
-Write-Host "============================================================${RESET}"
+Write-Host "`n============================================================" -ForegroundColor Green
+Write-Host "    INSTALACAO NO WINDOWS CONCLUIDA COM SUCESSO!            " -ForegroundColor Green
+Write-Host "============================================================" -ForegroundColor Green
 Write-Host "Para iniciar o servidor no futuro a qualquer momento, execute:"
-Write-Host "  ${CYAN}cd `"$scriptDir`"; .\start.ps1${RESET}"
-Write-Host "  ${CYAN}(ou dê dois cliques em start.bat)${RESET}`n"
-Write-Host "${BOLD}${GREEN}🚀 Iniciando o servidor automaticamente agora...${RESET}`n"
+Write-Host "  cd `"$scriptDir`"; .\start.ps1" -ForegroundColor Cyan
+Write-Host "  (ou de dois cliques em start.bat)`n" -ForegroundColor Cyan
+Write-Host "Iniciando o servidor automaticamente agora...`n" -ForegroundColor Green
 
 # Iniciar o servidor
 & "$scriptDir\start.ps1"

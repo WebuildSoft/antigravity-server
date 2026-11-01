@@ -1,14 +1,7 @@
 # ==============================================================================
-#  Antigravity Server - Inicializador para Windows com Túnel e QR Code
+#  Antigravity Server - Inicializador para Windows com Tunel e QR Code
 # ==============================================================================
 $ErrorActionPreference = "Continue"
-
-$BOLD = "`e[1m"
-$GREEN = "`e[32m"
-$YELLOW = "`e[33m"
-$CYAN = "`e[36m"
-$RED = "`e[31m"
-$RESET = "`e[0m"
 
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) {
@@ -16,14 +9,17 @@ if (-not $scriptDir) {
 }
 Set-Location $scriptDir
 
-# Carregar variáveis de ambiente do .env se existir
+# Carregar variaveis de ambiente do .env se existir
 if (Test-Path "$scriptDir\.env") {
-    Get-Content "$scriptDir\.env" | ForEach-Object {
-        $line = $_.Trim()
-        if ($line -and -not $line.StartsWith("#") -and $line.Contains("=")) {
-            $parts = $line.Split("=", 2)
+    $envLines = Get-Content "$scriptDir\.env" -ErrorAction SilentlyContinue
+    foreach ($line in $envLines) {
+        $trimmed = $line.Trim()
+        if ($trimmed -and -not $trimmed.StartsWith("#") -and $trimmed.Contains("=")) {
+            $parts = $trimmed.Split("=", 2)
             $k = $parts[0].Trim()
-            $v = $parts[1].Trim().Trim('"').Trim("'")
+            $v = $parts[1].Trim()
+            if ($v.StartsWith('"') -and $v.EndsWith('"')) { $v = $v.Substring(1, $v.Length - 2) }
+            if ($v.StartsWith("'") -and $v.EndsWith("'")) { $v = $v.Substring(1, $v.Length - 2) }
             if (-not [System.Environment]::GetEnvironmentVariable($k)) {
                 [System.Environment]::SetEnvironmentVariable($k, $v, "Process")
             }
@@ -31,7 +27,10 @@ if (Test-Path "$scriptDir\.env") {
     }
 }
 
-$port = if ($env:PORT) { [int]$env:PORT } else { 4040 }
+$port = 4040
+if ($env:PORT) {
+    $port = [int]$env:PORT
+}
 
 function Test-PortInUse($p) {
     $conn = Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue
@@ -40,12 +39,12 @@ function Test-PortInUse($p) {
 
 $originalPort = $port
 while (Test-PortInUse $port) {
-    Write-Host "${YELLOW}⚠️ Porta $port ocupada por outro processo. Procurando próxima porta livre...${RESET}"
+    Write-Host "[!] Porta $port ocupada por outro processo. Procurando proxima porta livre..." -ForegroundColor Yellow
     $port++
 }
 
 if ($port -ne $originalPort) {
-    Write-Host "${GREEN}✓ Porta livre selecionada automaticamente:${RESET} ${BOLD}${port}${RESET}"
+    Write-Host "[OK] Porta livre selecionada automaticamente: $port" -ForegroundColor Green
 }
 $env:PORT = "$port"
 
@@ -61,7 +60,7 @@ $cfProcess = $null
 $serverProcess = $null
 
 function Cleanup {
-    Write-Host "`n${YELLOW}Encerrando servidor e túnel...${RESET}"
+    Write-Host "`nEncerrando servidor e tunel..." -ForegroundColor Yellow
     if ($serverProcess -and -not $serverProcess.HasExited) {
         Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
     }
@@ -75,19 +74,21 @@ function Cleanup {
 # ------------------------------------------------------------------------------
 $publicUrl = $null
 if (Test-Path $cfBin) {
-    Write-Host "${CYAN}Iniciando Quick Tunnel gratuito Cloudflare (Zero-Config)...${RESET}"
+    Write-Host "Iniciando Quick Tunnel Cloudflare (Zero-Config)..." -ForegroundColor Cyan
     $tunnelLog = Join-Path $env:TEMP "cf_quick_tunnel_$port.log"
-    if (Test-Path $tunnelLog) { Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue }
+    if (Test-Path $tunnelLog) {
+        Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue
+    }
 
     $cfProcess = Start-Process -FilePath $cfBin -ArgumentList "tunnel", "--url", "http://localhost:$port" -RedirectStandardError $tunnelLog -NoNewWindow -PassThru
 
-    Write-Host -NoNewline "Aguardando URL pública do túnel"
+    Write-Host -NoNewline "Aguardando URL publica do tunel" -ForegroundColor Yellow
     for ($i = 0; $i -lt 25; $i++) {
         Start-Sleep -Seconds 1
-        Write-Host -NoNewline "."
+        Write-Host -NoNewline "." -ForegroundColor Yellow
         if (Test-Path $tunnelLog) {
-            $content = Get-Content $tunnelLog -Raw -ErrorAction SilentlyContinue
-            if ($content -match "https://[-a-zA-Z0-9\.]+\.trycloudflare\.com") {
+            $logContent = Get-Content $tunnelLog -Raw -ErrorAction SilentlyContinue
+            if ($logContent -match 'https://[-a-zA-Z0-9.]+\.trycloudflare\.com') {
                 $publicUrl = $Matches[0]
                 $env:PUBLIC_URL = $publicUrl
                 break
@@ -97,14 +98,15 @@ if (Test-Path $cfBin) {
     Write-Host ""
 
     if ($publicUrl) {
-        Write-Host "${GREEN}✓ Túnel público estabelecido:${RESET} ${BOLD}${publicUrl}${RESET}"
+        Write-Host "[OK] Tunel publico estabelecido: " -ForegroundColor Green -NoNewline
+        Write-Host $publicUrl -ForegroundColor Cyan
     } else {
-        Write-Host "${YELLOW}⚠️ O túnel demorou a responder. O servidor iniciará apenas com os links locais/IP.${RESET}"
+        Write-Host "[!] O tunel demorou a responder. O servidor iniciara com conexao local/IP." -ForegroundColor Yellow
     }
 }
 
 # ------------------------------------------------------------------------------
-# Iniciar Servidor Executável
+# Iniciar Servidor Executavel
 # ------------------------------------------------------------------------------
 $serverExe = "$scriptDir\antigravity-server.exe"
 if (-not (Test-Path $serverExe)) {
@@ -112,8 +114,8 @@ if (-not (Test-Path $serverExe)) {
     if (Test-Path $prebuilt) {
         Copy-Item $prebuilt $serverExe -Force
     } else {
-        Write-Host "${RED}❌ Executável antigravity-server.exe não encontrado.${RESET}"
-        Write-Host "Por favor execute .\install.ps1 primeiro."
+        Write-Host "[X] Executavel antigravity-server.exe nao encontrado." -ForegroundColor Red
+        Write-Host "Por favor execute .\install.ps1 primeiro." -ForegroundColor Yellow
         Cleanup
         exit 1
     }
