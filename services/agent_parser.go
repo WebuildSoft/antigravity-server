@@ -7,7 +7,6 @@ import (
 	"io"
 	"os/exec"
 	"strings"
-	"syscall"
 	"time"
 
 	"antigravity-bridge/db"
@@ -205,9 +204,7 @@ func (s *Session) processStdout(stdout io.Reader, stdin io.Closer, cmd *exec.Cmd
 			}
 			go func() {
 				time.Sleep(200 * time.Millisecond)
-				if cmd != nil && cmd.Process != nil {
-					_ = cmd.Process.Signal(syscall.SIGTERM)
-				}
+				terminateProcess(cmd)
 				checkNextInQueue()
 			}()
 

@@ -7,7 +7,6 @@ import (
 	"io"
 	"os/exec"
 	"sync"
-	"syscall"
 	"time"
 
 	"antigravity-bridge/config"
@@ -151,13 +150,8 @@ func (s *Session) KillProcess() {
 	}
 
 	if s.Cmd != nil && s.Cmd.Process != nil {
-		pid := s.Cmd.Process.Pid
-		fmt.Printf("[WS] 🛑 Terminating process group for session %s (PID %d)\n", s.ID, pid)
-		// Send SIGTERM to process group
-		_ = syscall.Kill(-pid, syscall.SIGTERM)
-		time.Sleep(200 * time.Millisecond)
-		// Force SIGKILL if still running
-		_ = syscall.Kill(-pid, syscall.SIGKILL)
+		fmt.Printf("[WS] 🛑 Terminating process group for session %s (PID %d)\n", s.ID, s.Cmd.Process.Pid)
+		killProcessGroup(s.Cmd)
 		s.Cmd = nil
 		s.Stdin = nil
 	}

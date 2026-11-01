@@ -6,30 +6,30 @@ Servidor autônomo para conectar o aplicativo móvel **Antigravity Mobile** (And
 
 ## ⚡ Início Rápido (Quickstart)
 
-### 1. Instalação e Checagem Automática
-Abra o terminal na pasta do servidor e execute:
+### 🐧 Linux & 🍎 macOS (Terminal)
+Execute em uma linha para instalar e iniciar automaticamente:
 ```bash
-./install.sh
+curl -fsSL https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/install.sh | bash
 ```
-O instalador cuidará de tudo:
-* ✅ Detecta seu sistema (Linux ou macOS, Intel/AMD ou ARM);
-* ✅ Verifica se você tem o CLI `agy` (se não tiver, baixa e instala automaticamente);
-* ✅ Verifica se você tem uma conta Google conectada (se não tiver, abre o login interativo);
-* ✅ Baixa o `cloudflared` para criar conexões remotas seguras;
-* ✅ Configura permissões e prepara o servidor.
+*(Ou se já clonou: `./install.sh`)*
 
 ---
 
-### 2. Iniciar o Servidor
-Execute:
-```bash
-./start.sh
+### 🪟 Windows (PowerShell)
+Abra o **PowerShell** e cole o comando de linha única:
+```powershell
+irm https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/install.ps1 | iex
 ```
+*(Ou dê dois cliques em `start.bat` se baixou o `.zip`)*
 
-Ao iniciar:
-1. Um **Túnel Seguro Gratuito** (`*.trycloudflare.com`) é gerado instantaneamente (sem precisar de conta ou domínio).
-2. Um **QR Code** é exibido diretamente no terminal.
-3. No seu celular Android, abra o **Antigravity Mobile** e escaneie o QR Code para conectar!
+---
+
+### O que o instalador faz automaticamente:
+* ✅ Detecta seu sistema (Linux, macOS ou Windows, x64 ou ARM);
+* ✅ Verifica se você tem o CLI `agy` (se não tiver, instala ou configura);
+* ✅ Baixa o binário oficial seguro do `cloudflared` para criar túnel remoto com criptografia;
+* ✅ Prepara o banco SQLite local e variáveis de ambiente `.env`;
+* ✅ Inicia o servidor e exibe o **QR Code** no terminal para parear com o app Android!
 
 ---
 

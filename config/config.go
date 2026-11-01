@@ -86,9 +86,16 @@ func detectAgyBinary(home string) string {
 	if pathAgy, err := exec.LookPath("agy"); err == nil && pathAgy != "" {
 		return pathAgy
 	}
+	if pathAgy, err := exec.LookPath("agy.exe"); err == nil && pathAgy != "" {
+		return pathAgy
+	}
 	candidates := []string{
-		filepath.Join(home, ".local/bin/agy"),
-		filepath.Join(home, ".gemini/antigravity-cli/bin/agy"),
+		filepath.Join(home, ".local", "bin", "agy"),
+		filepath.Join(home, ".local", "bin", "agy.exe"),
+		filepath.Join(home, ".gemini", "antigravity-cli", "bin", "agy"),
+		filepath.Join(home, ".gemini", "antigravity-cli", "bin", "agy.exe"),
+		filepath.Join(home, "AppData", "Local", "Programs", "antigravity", "bin", "agy.exe"),
+		filepath.Join(home, "AppData", "Local", "antigravity-cli", "bin", "agy.exe"),
 		"/usr/local/bin/agy",
 		"/usr/bin/agy",
 	}

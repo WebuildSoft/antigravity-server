@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"antigravity-bridge/config"
@@ -96,12 +95,12 @@ func (s *Session) ExecuteTurn(task AgentTask) {
 
 	cmd := exec.CommandContext(ctx, config.AppConfig.AgyBin, args...)
 	cmd.Dir = cwd
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true, // create new process group so we can cleanly kill all children
-	}
+	prepareProcess(cmd)
 
 	home, _ := os.UserHomeDir()
-	pathEnv := fmt.Sprintf("%s/.gemini/antigravity-cli/bin:%s/.local/bin:%s", home, home, os.Getenv("PATH"))
+	geminiBin := filepath.Join(home, ".gemini", "antigravity-cli", "bin")
+	localBin := filepath.Join(home, ".local", "bin")
+	pathEnv := strings.Join([]string{geminiBin, localBin, os.Getenv("PATH")}, string(os.PathListSeparator))
 	cmd.Env = append(os.Environ(),
 		"PATH="+pathEnv,
 		"PYTHONUNBUFFERED=1",
