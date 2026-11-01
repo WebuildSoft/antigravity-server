@@ -50,7 +50,7 @@ if [ ! -f "$SCRIPT_DIR/antigravity-server" ] && [ ! -f "$SCRIPT_DIR/start.sh" ];
         echo -e "${CYAN}⬇ Baixando pacote oficial do servidor para ${OS}...${RESET}"
         ZIP_URL="https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-${OS}.zip"
         curl -# -fSL "$ZIP_URL" -o /tmp/antigravity-server.zip
-        unzip -q -o /tmp/antigravity-server.zip -d "$INSTALL_TARGET"
+        unzip -q -o /tmp/antigravity-server.zip -d "$HOME"
         rm -f /tmp/antigravity-server.zip
     fi
     cd "$INSTALL_TARGET"

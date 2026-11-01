@@ -24,7 +24,7 @@ if (-not $scriptDir -or -not (Test-Path "$scriptDir\antigravity-server.exe")) {
         } else {
             Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
         }
-        Expand-Archive -Path $zipPath -DestinationPath $scriptDir -Force
+        Expand-Archive -Path $zipPath -DestinationPath $HOME -Force
         Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
     }
 }
