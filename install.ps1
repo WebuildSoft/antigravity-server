@@ -7,34 +7,25 @@ Write-Host "============================================================" -Foreg
 Write-Host "    INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE (WINDOWS)     " -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 
-# 1. Definir diretorio de instalacao
+# 1. Definir diretorio de instalacao e baixar pacote limpo de producao
 $scriptDir = $PSScriptRoot
-if (-not $scriptDir -or -not (Test-Path "$scriptDir\go.mod")) {
+if (-not $scriptDir -or -not (Test-Path "$scriptDir\antigravity-server.exe")) {
     $scriptDir = Join-Path $HOME "antigravity-server"
-    Write-Host "Repositorio nao detectado na pasta atual." -ForegroundColor Cyan
-    if (Test-Path "$scriptDir\.git") {
-        Write-Host "Atualizando repositorio existente em: $scriptDir..." -ForegroundColor Cyan
-        Push-Location $scriptDir
-        try { git pull --quiet origin main } catch {}
-        Pop-Location
-    } elseif (Test-Path "$scriptDir\go.mod") {
-        Write-Host "[OK] Pasta do repositorio ja encontrada em: $scriptDir" -ForegroundColor Green
-    } else {
-        Write-Host "Baixando repositorio oficial em: $scriptDir..." -ForegroundColor Cyan
-        if (Get-Command git -ErrorAction SilentlyContinue) {
-            git clone --quiet https://github.com/WebuildSoft/antigravity-server.git $scriptDir
+    if (-not (Test-Path $scriptDir)) {
+        New-Item -ItemType Directory -Force -Path $scriptDir | Out-Null
+    }
+
+    if (-not (Test-Path "$scriptDir\antigravity-server.exe")) {
+        Write-Host "Baixando pacote oficial do servidor para Windows..." -ForegroundColor Cyan
+        $zipUrl = "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-windows.zip"
+        $zipPath = Join-Path $env:TEMP "antigravity-server-windows.zip"
+        if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+            curl.exe -# -fSL "$zipUrl" -o "$zipPath"
         } else {
-            Write-Host "Git nao encontrado. Baixando arquivos compactados..." -ForegroundColor Yellow
-            $zipPath = Join-Path $env:TEMP "antigravity-server.zip"
-            if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-                curl.exe -# -fSL "https://github.com/WebuildSoft/antigravity-server/archive/refs/heads/main.zip" -o "$zipPath"
-            } else {
-                Invoke-WebRequest -Uri "https://github.com/WebuildSoft/antigravity-server/archive/refs/heads/main.zip" -OutFile "$zipPath"
-            }
-            Expand-Archive -Path $zipPath -DestinationPath $env:TEMP -Force
-            Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
-            Move-Item -Path (Join-Path $env:TEMP "antigravity-server-main") -Destination $scriptDir -Force
+            Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
         }
+        Expand-Archive -Path $zipPath -DestinationPath $scriptDir -Force
+        Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -166,43 +157,16 @@ $serverExe = "$scriptDir\antigravity-server.exe"
 if (-not (Test-Path $serverExe)) {
     $prebuilt = "$scriptDir\bin\antigravity-server-windows-amd64.exe"
     if (Test-Path $prebuilt) {
-        Write-Host "      [OK] Utilizando binario pre-compilado para Windows x64" -ForegroundColor Green
         Copy-Item $prebuilt $serverExe -Force
-    } elseif (Get-Command go -ErrorAction SilentlyContinue) {
-        Write-Host "      Compilando antigravity-server via Go local..." -ForegroundColor Cyan
-        go build -ldflags="-s -w" -o $serverExe .
+        Write-Host "      [OK] Utilizando executavel do servidor" -ForegroundColor Green
     } else {
-        Write-Host "      Baixando executavel do servidor direto do repositorio..." -ForegroundColor Cyan
         $repoExeUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-windows-amd64.exe"
         if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
             curl.exe -# -fSL "$repoExeUrl" -o "$serverExe"
         } else {
             Invoke-WebRequest -Uri $repoExeUrl -OutFile $serverExe -UseBasicParsing
         }
-    }
-}
-
-# ------------------------------------------------------------------------------
-# 5. Limpeza de Arquivos de Desenvolvimento (Mantendo apenas o essencial)
-# ------------------------------------------------------------------------------
-if ((Test-Path $serverExe) -and ($scriptDir -eq (Join-Path $HOME "antigravity-server"))) {
-    $devFiles = @(
-        "main.go", "go.mod", "go.sum", "test-dev.sh", "install.sh", "start.sh",
-        "CHANGELOG.md", "SECURITY_CHANGES_AND_CLIENT_CONFIG.md",
-        "bin\antigravity-server-linux-amd64",
-        "bin\antigravity-server-linux-arm64",
-        "bin\antigravity-server-darwin-amd64",
-        "bin\antigravity-server-darwin-arm64",
-        "bin\antigravity-server-windows-amd64.exe"
-    )
-    foreach ($f in $devFiles) {
-        $p = Join-Path $scriptDir $f
-        if (Test-Path $p) { Remove-Item $p -Force -ErrorAction SilentlyContinue }
-    }
-    $devDirs = @("auth", "config", "db", "gateway", "services", "scripts", "tests")
-    foreach ($d in $devDirs) {
-        $p = Join-Path $scriptDir $d
-        if (Test-Path $p) { Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue }
+        Write-Host "      [OK] Executavel baixado com sucesso" -ForegroundColor Green
     }
 }
 

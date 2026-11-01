@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#  Antigravity Server - Instalador Inteligente (Linux & macOS)
+#  Antigravity Mobile Server - Instalador Inteligente Multiplataforma
 # ==============================================================================
 set -e
 
 BOLD="\033[1m"
-GREEN="\033[0;32m"
-YELLOW="\033[0;33m"
-CYAN="\033[0;36m"
-RED="\033[0;31m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+CYAN="\033[36m"
+RED="\033[31m"
 RESET="\033[0m"
 
 echo -e "${BOLD}${CYAN}"
@@ -17,47 +17,7 @@ echo "    🚀 INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE           "
 echo "============================================================"
 echo -e "${RESET}"
 
-# Detectar se estamos dentro do repositório clonado ou se foi executado via curl | bash
-if [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-else
-    SCRIPT_DIR="$PWD"
-fi
-
-# Se não estiver dentro do repositório (ex: executado via curl ... | bash)
-if [ ! -f "$SCRIPT_DIR/go.mod" ] && [ ! -f "$SCRIPT_DIR/start.sh" ]; then
-    INSTALL_TARGET="$SCRIPT_DIR/antigravity-server"
-    echo -e "${CYAN}📦 Repositório não detectado na pasta atual.${RESET}"
-    if [ -d "$INSTALL_TARGET/.git" ]; then
-        echo -e "${CYAN}🔄 Atualizando repositório existente em: ${INSTALL_TARGET}...${RESET}"
-        (cd "$INSTALL_TARGET" && git pull --quiet origin main || true)
-    elif [ -d "$INSTALL_TARGET" ] && [ -f "$INSTALL_TARGET/go.mod" ]; then
-        echo -e "${GREEN}✓ Pasta do repositório já encontrada em: ${INSTALL_TARGET}${RESET}"
-    else
-        echo -e "${CYAN}⬇ Baixando repositório oficial em: ${INSTALL_TARGET}...${RESET}"
-        if command -v git >/dev/null 2>&1; then
-            rm -rf "$INSTALL_TARGET" 2>/dev/null || true
-            git clone --quiet https://github.com/WebuildSoft/antigravity-server.git "$INSTALL_TARGET"
-        else
-            echo -e "${YELLOW}Git não encontrado. Baixando arquivos via tarball...${RESET}"
-            mkdir -p "$INSTALL_TARGET"
-            curl -fsSL https://github.com/WebuildSoft/antigravity-server/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C "$INSTALL_TARGET"
-        fi
-    fi
-    # Limpar pastas vazias se foram criadas na raiz por engano anteriormente
-    rmdir "$SCRIPT_DIR/bin" "$SCRIPT_DIR/data" "$SCRIPT_DIR/uploads" 2>/dev/null || true
-    cd "$INSTALL_TARGET"
-    SCRIPT_DIR="$INSTALL_TARGET"
-else
-    cd "$SCRIPT_DIR"
-fi
-
-mkdir -p bin data uploads
-
-# ------------------------------------------------------------------------------
 # 1. Detectar Sistema Operacional e Arquitetura
-# ------------------------------------------------------------------------------
-echo -e "${BOLD}[1/5] Detectando Sistema e Arquitetura...${RESET}"
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 ARCH="$(uname -m)"
 
@@ -76,12 +36,37 @@ case "$ARCH" in
         ;;
 esac
 
-echo -e "      Sistema: ${GREEN}${OS}${RESET} | Arquitetura: ${GREEN}${ARCH}${RESET}"
+# 2. Definir diretório e baixar pacote de produção se não estiver na pasta do servidor
+if [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+    SCRIPT_DIR="$PWD"
+fi
+
+if [ ! -f "$SCRIPT_DIR/antigravity-server" ] && [ ! -f "$SCRIPT_DIR/start.sh" ]; then
+    INSTALL_TARGET="$HOME/antigravity-server"
+    mkdir -p "$INSTALL_TARGET"
+    if [ ! -f "$INSTALL_TARGET/antigravity-server" ]; then
+        echo -e "${CYAN}⬇ Baixando pacote oficial do servidor para ${OS}...${RESET}"
+        ZIP_URL="https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-${OS}.zip"
+        curl -# -fSL "$ZIP_URL" -o /tmp/antigravity-server.zip
+        unzip -q -o /tmp/antigravity-server.zip -d "$INSTALL_TARGET"
+        rm -f /tmp/antigravity-server.zip
+    fi
+    cd "$INSTALL_TARGET"
+    SCRIPT_DIR="$INSTALL_TARGET"
+else
+    cd "$SCRIPT_DIR"
+fi
+
+mkdir -p bin data uploads
+
+echo -e "${BOLD}[1/4] Sistema:${RESET} ${GREEN}${OS}${RESET} (${GREEN}${ARCH}${RESET})"
 
 # ------------------------------------------------------------------------------
-# 2. Verificar ou Baixar Antigravity CLI ('agy')
+# 3. Verificar ou Baixar Antigravity CLI ('agy')
 # ------------------------------------------------------------------------------
-echo -e "\n${BOLD}[2/5] Verificando Antigravity CLI ('agy')...${RESET}"
+echo -e "\n${BOLD}[2/4] Verificando Antigravity CLI ('agy')...${RESET}"
 
 AGY_PATH="$(which agy 2>/dev/null || true)"
 if [ -z "$AGY_PATH" ] && [ -f "$HOME/.local/bin/agy" ]; then
@@ -111,9 +96,9 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 3. Verificar Autenticação Google no 'agy'
+# Verificar Autenticação Google no 'agy'
 # ------------------------------------------------------------------------------
-echo -e "\n${BOLD}[3/5] Verificando autenticação do 'agy'...${RESET}"
+echo -e "\nVerificando autenticação Google no Antigravity..."
 
 AUTH_OK=false
 if "$AGY_PATH" models >/dev/null 2>&1; then
@@ -152,7 +137,7 @@ fi
 # ------------------------------------------------------------------------------
 # 4. Verificar ou Baixar Cloudflare Tunnel (cloudflared)
 # ------------------------------------------------------------------------------
-echo -e "\n${BOLD}[4/5] Verificando Cloudflare Tunnel (cloudflared)...${RESET}"
+echo -e "\n${BOLD}[3/4] Verificando Cloudflare Tunnel (cloudflared)...${RESET}"
 
 CLOUDFLARED_BIN="$SCRIPT_DIR/bin/cloudflared"
 SYSTEM_CLOUDFLARED="$(which cloudflared 2>/dev/null || true)"
@@ -179,46 +164,27 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 5. Configurar Arquivo .env e Permissões
+# 5. Configurar Arquivo .env e Executável
 # ------------------------------------------------------------------------------
-echo -e "\n${BOLD}[5/5] Finalizando configurações...${RESET}"
+echo -e "\n${BOLD}[4/4] Finalizando configurações...${RESET}"
 
 if [ ! -f "$SCRIPT_DIR/.env" ] && [ -f "$SCRIPT_DIR/.env.example" ]; then
     cp "$SCRIPT_DIR/.env.example" "$SCRIPT_DIR/.env"
     echo -e "      ${GREEN}✓ Arquivo .env criado a partir de .env.example${RESET}"
 fi
 
-# Se o binário não existir na raiz, usar o pré-compilado ou compilar via Go
 if [ ! -f "$SCRIPT_DIR/antigravity-server" ]; then
     PREBUILT="$SCRIPT_DIR/bin/antigravity-server-${OS}-${GO_ARCH}"
     if [ -f "$PREBUILT" ]; then
         echo -e "      ${GREEN}✓ Utilizando binário pré-compilado para ${OS}-${GO_ARCH}${RESET}"
         cp "$PREBUILT" "$SCRIPT_DIR/antigravity-server"
         chmod +x "$SCRIPT_DIR/antigravity-server"
-    elif [ -f "$SCRIPT_DIR/go.mod" ] && command -v go >/dev/null 2>&1; then
-        echo -e "      ${CYAN}Compilando antigravity-server via Go...${RESET}"
-        go build -ldflags="-s -w" -o "$SCRIPT_DIR/antigravity-server" .
     fi
 fi
 
 chmod +x "$SCRIPT_DIR/start.sh" 2>/dev/null || true
 if [ -f "$SCRIPT_DIR/antigravity-server" ]; then
     chmod +x "$SCRIPT_DIR/antigravity-server"
-    if [ "$SCRIPT_DIR" = "$HOME/antigravity-server" ]; then
-        DEV_FILES=(
-            "main.go" "go.mod" "go.sum" "test-dev.sh" "install.ps1" "start.ps1" "install.bat" "start.bat"
-            "CHANGELOG.md" "SECURITY_CHANGES_AND_CLIENT_CONFIG.md"
-            "bin/antigravity-server-windows-amd64.exe"
-            "bin/antigravity-server-linux-amd64"
-            "bin/antigravity-server-linux-arm64"
-            "bin/antigravity-server-darwin-amd64"
-            "bin/antigravity-server-darwin-arm64"
-        )
-        for f in "${DEV_FILES[@]}"; do
-            rm -f "$SCRIPT_DIR/$f" 2>/dev/null || true
-        done
-        rm -rf "$SCRIPT_DIR/auth" "$SCRIPT_DIR/config" "$SCRIPT_DIR/db" "$SCRIPT_DIR/gateway" "$SCRIPT_DIR/services" "$SCRIPT_DIR/scripts" "$SCRIPT_DIR/tests" 2>/dev/null || true
-    fi
 fi
 
 echo -e "\n${BOLD}${GREEN}============================================================"
