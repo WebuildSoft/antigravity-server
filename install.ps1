@@ -151,7 +151,7 @@ if (-not (Test-Path "$scriptDir\web\index.html")) {
     } else {
         Invoke-WebRequest -Uri $pkgUrl -OutFile $pkgZip
     }
-    Expand-Archive -Path $pkgZip -DestinationPath $HOME -Force
+    Expand-Archive -Path $pkgZip -DestinationPath $scriptDir -Force
     Remove-Item -Path $pkgZip -Force -ErrorAction SilentlyContinue
     Write-Host "      [OK] Interface web pronta em web/" -ForegroundColor Green
 } else {
