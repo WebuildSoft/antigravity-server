@@ -102,20 +102,29 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	clientIP := r.RemoteAddr
+	if cfIP := r.Header.Get("CF-Connecting-IP"); cfIP != "" {
+		clientIP = cfIP + " (Cloudflare)"
+	} else if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		clientIP = strings.Split(xff, ",")[0]
+	}
+
+	fmt.Printf("📱 [WS] Nova solicitacao WebSocket de %s (Host: %s, Origin: %s)\n", clientIP, r.Host, r.Header.Get("Origin"))
+
 	if !websocket.IsWebSocketUpgrade(r) {
+		fmt.Printf("⚠️ [WS] Falha: requisicao nao contem headers de WebSocket Upgrade\n")
 		http.Error(w, "WebSocket connection expected (Upgrade: websocket)", http.StatusBadRequest)
 		return
 	}
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Printf("[WS] Upgrade error: %v\n", err)
+		fmt.Printf("❌ [WS Handshake Error] %v (Origin: %s, Host: %s)\n", err, r.Header.Get("Origin"), r.Host)
 		return
 	}
 	ws.SetReadLimit(100 * 1024 * 1024) // 100 MB para permitir mensagens com múltiplas fotos em alta resolução
 
-	clientIP := r.RemoteAddr
 	token := r.URL.Query().Get("token")
-	isRemote := !isLoopbackAddr(clientIP, r.Header)
+	isRemote := !isLoopbackAddr(r.RemoteAddr, r.Header)
 
 	client := &ClientConn{
 		ws:      ws,

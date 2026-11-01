@@ -160,7 +160,8 @@ func handleRootAndStatic(w http.ResponseWriter, r *http.Request) {
 		fullPath = filepath.Join(webDirAbs, "index.html")
 		fi, err = os.Stat(fullPath)
 		if err != nil {
-			http.NotFound(w, r)
+			fmt.Printf("⚠️ [Web] Interface web não encontrada em %s. Exibindo página de download...\n", webDirAbs)
+			handleLandingPage(w, r)
 			return
 		}
 	}

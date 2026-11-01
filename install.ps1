@@ -171,24 +171,20 @@ if (-not (Test-Path "$scriptDir\.env")) {
 }
 
 $serverExe = "$scriptDir\antigravity-server.exe"
-if (-not (Test-Path $serverExe)) {
-    $prebuilt = "$scriptDir\bin\antigravity-server-windows-amd64.exe"
-    if (Test-Path $prebuilt) {
-        Copy-Item $prebuilt $serverExe -Force
-        Write-Host "      [OK] Utilizando executavel local" -ForegroundColor Green
+$repoExeUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-windows-amd64.exe"
+$prebuilt = "$scriptDir\bin\antigravity-server-windows-amd64.exe"
+
+if (Test-Path $prebuilt) {
+    try { Copy-Item $prebuilt $serverExe -Force -ErrorAction SilentlyContinue } catch {}
+} elseif (-not (Test-Path $serverExe)) {
+    Write-Host "      Baixando executavel oficial do servidor..." -ForegroundColor Cyan
+    if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+        curl.exe -# -fSL "$repoExeUrl" -o "$serverExe"
     } else {
-        Write-Host "      Baixando executavel oficial do servidor..." -ForegroundColor Cyan
-        $repoExeUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-windows-amd64.exe"
-        if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-            curl.exe -# -fSL "$repoExeUrl" -o "$serverExe"
-        } else {
-            Invoke-WebRequest -Uri $repoExeUrl -OutFile $serverExe -UseBasicParsing
-        }
-        Write-Host "      [OK] Executavel antigravity-server.exe pronto" -ForegroundColor Green
+        Invoke-WebRequest -Uri $repoExeUrl -OutFile $serverExe -UseBasicParsing
     }
-} else {
-    Write-Host "      [OK] Executavel antigravity-server.exe pronto" -ForegroundColor Green
 }
+Write-Host "      [OK] Executavel antigravity-server.exe pronto" -ForegroundColor Green
 
 Write-Host "`n============================================================" -ForegroundColor Green
 Write-Host "    INSTALACAO NO WINDOWS CONCLUIDA COM SUCESSO!            " -ForegroundColor Green

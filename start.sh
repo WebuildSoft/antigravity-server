@@ -98,7 +98,12 @@ elif [ -n "$CLOUDFLARED" ] && [ -x "$CLOUDFLARED" ]; then
     if [ -n "$PUBLIC_URL" ]; then
         echo -e "${GREEN}✓ Túnel público estabelecido:${RESET} ${BOLD}${PUBLIC_URL}${RESET}"
     else
-        echo -e "${YELLOW}⚠️ O túnel demorou a responder. O servidor iniciará apenas com os links locais/IP.${RESET}"
+        echo -e "${RED}❌ O túnel demorou a responder ou falhou.${RESET}"
+        if [ -f "$TUNNEL_LOG" ]; then
+            echo -e "${YELLOW}--- LOG DO CLOUDFLARE TUNNEL ---${RESET}"
+            tail -n 10 "$TUNNEL_LOG"
+            echo -e "${YELLOW}--------------------------------${RESET}"
+        fi
     fi
 fi
 

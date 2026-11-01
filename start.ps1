@@ -64,8 +64,12 @@ function Cleanup {
     if ($serverProcess -and -not $serverProcess.HasExited) {
         Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
     }
-    if ($cfProcess -and -not $cfProcess.HasExited) {
-        Stop-Process -Id $cfProcess.Id -Force -ErrorAction SilentlyContinue
+    if ($cfProcess) {
+        try {
+            if (-not $cfProcess.HasExited) {
+                $cfProcess.Kill()
+            }
+        } catch {}
     }
 }
 
@@ -76,20 +80,29 @@ $publicUrl = $null
 if (Test-Path $cfBin) {
     Write-Host "Iniciando Quick Tunnel Cloudflare (Zero-Config)..." -ForegroundColor Cyan
     $tunnelLog = Join-Path $env:TEMP "cf_quick_tunnel_$port.log"
-    $tunnelOut = Join-Path $env:TEMP "cf_out_$port.log"
     if (Test-Path $tunnelLog) {
         Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue
     }
-    if (Test-Path $tunnelOut) {
-        Remove-Item $tunnelOut -Force -ErrorAction SilentlyContinue
+
+    try {
+        $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+        $pinfo.FileName = $cfBin
+        $pinfo.Arguments = "tunnel --url http://127.0.0.1:$port --logfile `"$tunnelLog`""
+        $pinfo.UseShellExecute = $false
+        $pinfo.CreateNoWindow = $true
+        $cfProcess = [System.Diagnostics.Process]::Start($pinfo)
+    } catch {
+        Write-Host "[!] Falha ao iniciar cloudflared: $_" -ForegroundColor Red
     }
 
-    $cfProcess = Start-Process -FilePath $cfBin -ArgumentList "tunnel", "--url", "http://127.0.0.1:$port", "--protocol", "http2" -RedirectStandardError $tunnelLog -RedirectStandardOutput $tunnelOut -WindowStyle Hidden -PassThru
-
     Write-Host -NoNewline "Aguardando URL publica do tunel" -ForegroundColor Yellow
-    for ($i = 0; $i -lt 25; $i++) {
+    for ($i = 0; $i -lt 30; $i++) {
         Start-Sleep -Seconds 1
         Write-Host -NoNewline "." -ForegroundColor Yellow
+        if ($cfProcess -and $cfProcess.HasExited) {
+            Write-Host "`n[!] O processo do tunel encerrou inesperadamente (ExitCode: $($cfProcess.ExitCode))." -ForegroundColor Red
+            break
+        }
         if (Test-Path $tunnelLog) {
             $logContent = Get-Content $tunnelLog -Raw -ErrorAction SilentlyContinue
             if ($logContent -match 'https://[-a-zA-Z0-9.]+\.trycloudflare\.com') {
@@ -105,7 +118,14 @@ if (Test-Path $cfBin) {
         Write-Host "[OK] Tunel publico estabelecido: " -ForegroundColor Green -NoNewline
         Write-Host $publicUrl -ForegroundColor Cyan
     } else {
-        Write-Host "[!] O tunel demorou a responder. O servidor iniciara com conexao local/IP." -ForegroundColor Yellow
+        Write-Host "[X] O tunel Cloudflare nao conseguiu estabelecer conexao." -ForegroundColor Red
+        if (Test-Path $tunnelLog) {
+            Write-Host "`n--- LOG DE ERRO DO TUNEL (cloudflared) ---" -ForegroundColor Yellow
+            Get-Content $tunnelLog -ErrorAction SilentlyContinue | Select-Object -Last 12 | ForEach-Object {
+                Write-Host "  $_" -ForegroundColor DarkYellow
+            }
+            Write-Host "-------------------------------------------`n" -ForegroundColor Yellow
+        }
     }
 }
 

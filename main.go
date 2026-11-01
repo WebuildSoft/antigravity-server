@@ -54,6 +54,16 @@ func main() {
 
 	// Custom handler for root "/" to seamlessly upgrade to WebSocket if client requests it
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Log incoming HTTP requests (ignoring internal heavy asset requests)
+		if !strings.HasPrefix(r.URL.Path, "/canvaskit/") && !strings.HasPrefix(r.URL.Path, "/assets/") {
+			clientIP := r.RemoteAddr
+			if cfIP := r.Header.Get("CF-Connecting-IP"); cfIP != "" {
+				clientIP = cfIP + " (Cloudflare)"
+			} else if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+				clientIP = strings.Split(xff, ",")[0]
+			}
+			fmt.Printf("🌐 [HTTP] %s %s from %s\n", r.Method, r.URL.Path, clientIP)
+		}
 		if (r.URL.Path == "/" || r.URL.Path == "/ws") && websocket.IsWebSocketUpgrade(r) {
 			gateway.HandleWebSocket(w, r)
 			return
