@@ -40,7 +40,7 @@ Set-Location $scriptDir
 New-Item -ItemType Directory -Force -Path "$scriptDir\bin", "$scriptDir\data", "$scriptDir\uploads" | Out-Null
 
 # ------------------------------------------------------------------------------
-# 2. Verificar Antigravity CLI ('agy')
+# 2. Verificar ou Instalar Antigravity CLI ('agy')
 # ------------------------------------------------------------------------------
 Write-Host "`n[1/4] Verificando Antigravity CLI ('agy')..." -ForegroundColor Cyan
 $agyPath = $null
@@ -89,9 +89,38 @@ if (-not $agyPath) {
 
 if ($agyPath) {
     Write-Host "      [OK] agy encontrado: $agyPath" -ForegroundColor Green
+
+    # --------------------------------------------------------------------------
+    # Verificar Autenticacao Google no 'agy'
+    # --------------------------------------------------------------------------
+    Write-Host "`nVerificando autenticacao Google no Antigravity..." -ForegroundColor Cyan
+    $authOk = $false
+    try {
+        $p = Start-Process -FilePath $agyPath -ArgumentList "models" -NoNewWindow -Wait -PassThru -ErrorAction SilentlyContinue
+        if ($p.ExitCode -eq 0) {
+            $authOk = $true
+        }
+    } catch {}
+
+    if ($authOk) {
+        Write-Host "      [OK] Conta Google conectada e pronta para responder." -ForegroundColor Green
+    } else {
+        Write-Host "      [!] Nenhuma conta Google conectada ao Antigravity ainda." -ForegroundColor Yellow
+        Write-Host "      Abrindo login Google no seu navegador..." -ForegroundColor Cyan
+        try {
+            Start-Process -FilePath $agyPath -Wait
+            try {
+                $p2 = Start-Process -FilePath $agyPath -ArgumentList "models" -NoNewWindow -Wait -PassThru -ErrorAction SilentlyContinue
+                if ($p2.ExitCode -eq 0) {
+                    Write-Host "      [OK] Login realizado com sucesso!" -ForegroundColor Green
+                }
+            } catch {}
+        } catch {
+            Write-Host "      [!] Autenticacao interativa ignorada: $_" -ForegroundColor Yellow
+        }
+    }
 } else {
-    Write-Host "      [!] Antigravity CLI ('agy') nao encontrado no PATH." -ForegroundColor Yellow
-    Write-Host "      Dica: Se voce ainda nao instalou o agy no Windows, certifique-se de instalar o Antigravity CLI." -ForegroundColor Cyan
+    Write-Host "      [!] Antigravity CLI ('agy') nao detectado." -ForegroundColor Yellow
 }
 
 # ------------------------------------------------------------------------------

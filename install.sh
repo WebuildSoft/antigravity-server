@@ -133,11 +133,19 @@ else
         if "$AGY_PATH" models >/dev/null 2>&1; then
             echo -e "      ${GREEN}✓ Login realizado com sucesso!${RESET}"
         else
-            echo -e "      ${YELLOW}⚠️ O login não foi concluído. Você poderá autenticar depois executando 'agy' no terminal.${RESET}"
+            echo -e "      ${YELLOW}⚠️ O login não foi concluído. O servidor ainda iniciará normalmente.${RESET}"
+        fi
+    elif [ -c /dev/tty ]; then
+        echo -e "      ${CYAN}🔑 Vamos iniciar a autenticação interativa agora...${RESET}"
+        echo -e "      Uma janela ou link será exibido abaixo para você autorizar no navegador."
+        echo ""
+        "$AGY_PATH" < /dev/tty || true
+        echo ""
+        if "$AGY_PATH" models >/dev/null 2>&1; then
+            echo -e "      ${GREEN}✓ Login realizado com sucesso!${RESET}"
         fi
     else
-        echo -e "      ${YELLOW}⚠️ Como o instalador foi chamado de forma não-interativa (pipe), faça login após a instalação digitando:${RESET}"
-        echo -e "         ${BOLD}agy${RESET}"
+        echo -e "      ${YELLOW}⚠️ Execute 'agy' no terminal quando desejar conectar sua conta Google.${RESET}"
     fi
 fi
 
