@@ -1,104 +1,118 @@
-# 🚀 Antigravity Mobile Server
+<div align="center">
 
-Servidor autônomo para conectar o aplicativo móvel **Antigravity Mobile** (Android / Google Play Store e Web) ao poder do **Google Antigravity CLI (`agy`)**.
+<img src="https://raw.githubusercontent.com/WebuildSoft/antigravity-mobile-site/main/icons/Icon-192.png" width="88" height="88" alt="Antigravity Mobile Logo" />
+
+# Antigravity Mobile Server
+
+Servidor companion de alta performance para conectar o aplicativo móvel **Antigravity Mobile** ao **Google Antigravity CLI (`agy`)**.
+
+[![Go Version](https://img.shields.io/badge/go-1.24-00ADD8?style=flat-square&logo=go&logoColor=white)](go.mod)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-334155?style=flat-square)](#início-rápido)
+[![License](https://img.shields.io/badge/license-MIT-emerald?style=flat-square)](LICENSE)
+
+</div>
 
 ---
 
-## ⚡ Início Rápido (Quickstart)
+## Início Rápido
 
-### 🐧 Linux & 🍎 macOS (Terminal)
-Execute em uma linha para instalar e iniciar automaticamente:
+### Linux e macOS (Terminal)
+Execute o script em linha única para instalação e inicialização:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/install.sh | bash
 ```
-*(Ou se já clonou: `./install.sh`)*
+*(Ou no repositório clonado: `./install.sh`)*
 
 ---
 
-### 🪟 Windows (PowerShell)
-Abra o **PowerShell** e cole o comando de linha única:
+### Windows (PowerShell)
+Execute no **PowerShell**:
 ```powershell
 irm https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/install.ps1 | iex
 ```
-*(Ou dê dois cliques em `start.bat` se baixou o `.zip` ou execute `.\start.ps1`)*
+*(Ou execute `.\start.ps1` no diretório extraído)*
 
 ---
 
-### O que o instalador faz automaticamente:
-* ✅ Detecta seu sistema (Linux, macOS ou Windows, x64 ou ARM);
-* ✅ Verifica se você tem o CLI `agy` (se não tiver, instala ou configura);
-* ✅ Baixa o binário oficial seguro do `cloudflared` para criar túnel remoto com criptografia;
-* ✅ Prepara o banco SQLite local e variáveis de ambiente `.env`;
-* ✅ Inicia o servidor e exibe o **QR Code** no terminal para parear com o app Android!
+## Funcionalidades do Instalador
+
+* **Detecção Automática:** Identifica arquitetura e sistema operacional (Linux, macOS Universal ou Windows x64/ARM64).
+* **Verificação do CLI Antigravity:** Valida se o binário `agy` está acessível no PATH do sistema.
+* **Túnel Remoto Seguro:** Configura binário nativo do `cloudflared` para comunicação com terminação TLS sem dependência de portas expostas.
+* **Pareamento Direto:** Gera código QR no próprio terminal para conexão instantânea com o aplicativo móvel.
 
 ---
 
-## 🛠️ Resolução de Dúvidas e Problemas Comuns
+## Diagnóstico e Solução de Problemas
 
-### 🛡️ 1. O Windows Defender ou Antivírus bloqueou o `start.bat`?
-* **Motivo:** O binário é open source recente sem certificado comercial pago da Microsoft e o `.bat` usa `-ExecutionPolicy Bypass`.
-* **Se o SmartScreen aparecer:** Clique em **"Mais informações"** > **"Executar assim mesmo"**.
-* **Se o antivírus bloquear:** Acesse *Segurança do Windows > Proteção contra vírus e ameaças > Histórico de proteção > Ações > Restaurar*.
-* **Melhor alternativa:** Abra a pasta no PowerShell e rode o script nativo diretamente:
+### 1. Alerta do Windows Defender ou SmartScreen
+* **Causa:** Binários de código aberto recém-compilados sem certificado comercial pago da Microsoft podem acionar alertas preventivos do sistema.
+* **SmartScreen ("O Windows protegeu o seu computador"):**
+  Selecione **"Mais informações"** e clique em **"Executar assim mesmo"**.
+* **Arquivo bloqueado:**
+  Acesse *Segurança do Windows > Proteção contra vírus e ameaças > Histórico de proteção* e clique em *Permitir no dispositivo*.
+* **Recomendação técnica:**
+  Execute diretamente o script PowerShell no terminal da pasta:
   ```powershell
   .\start.ps1
   ```
 
----
+### 2. Autenticação com a Conta Google no Antigravity CLI (`agy`)
+> [!WARNING]
+> O comando `agy auth login` **não existe** no CLI e resultará em erro de sintaxe.
 
-### 🔑 2. Como conectar a conta Google no Antigravity CLI (`agy`)?
-> 🛑 **Atenção:** O comando `agy auth login` **não existe** e retornará erro.
-
-* Para conectar ou autorizar sua conta Google, digite no terminal do seu computador:
+* Para autenticar sua conta, execute no terminal da sua máquina:
   ```bash
   agy
   ```
-  O Antigravity abrirá e fornecerá a janela/link oficial do Google para autorizar seu acesso no navegador.
-* **Como testar se está tudo certo:**
-  Digite no terminal:
+  O Antigravity abrirá uma sessão interativa e fornecerá o link de autorização do Google no navegador.
+* Para validar a conectividade e os modelos de IA disponíveis:
   ```bash
   agy models
   ```
-  Se a lista de modelos de IA for exibida, sua máquina está pronta para responder ao celular!
 
----
-
-### 🧱 3. O celular não conecta no Wi-Fi? (Liberar o Firewall na Porta 4040)
-Se o firewall do Windows bloqueou a porta local `4040`, abra o **PowerShell como Administrador** e execute:
+### 3. Conexão Local Bloqueada por Firewall (Porta 4040)
+Caso o celular não localize o computador na rede Wi-Fi local, execute no **PowerShell como Administrador**:
 ```powershell
 New-NetFirewallRule -DisplayName "Antigravity Server (Porta 4040)" -Direction Inbound -LocalPort 4040 -Protocol TCP -Action Allow
 ```
 *(No Linux com UFW ativo: `sudo ufw allow 4040/tcp`)*.
 
----
-
-### 🌐 4. Usando fora de casa ou em Wi-Fi de Faculdade/Empresa (Túnel Cloudflare)
-Se você estiver no 4G/5G ou em redes com **Isolamento de AP** (onde o roteador impede dispositivos de se comunicarem diretamente):
-- O servidor gera automaticamente uma URL de túnel seguro com final `.trycloudflare.com`.
-- Basta escanear o QR Code de túnel no celular para se conectar de qualquer lugar do mundo.
+### 4. Redes Públicas, Corporativas ou Conexão 4G/5G
+Em redes com isolamento de cliente (AP Isolation) ou conexões fora da rede local, o servidor cria automaticamente um Quick Tunnel com terminação `.trycloudflare.com`. Aponte a câmera para o código QR do túnel para conectar de qualquer lugar.
 
 ---
 
-## ⚙️ Configurações Opcionais (`.env`)
+## Configurações Opcionais (`.env`)
 
-Copie o `.env.example` para `.env` se desejar personalizar:
-* `PORT`: Porta local (padrão: `4040`).
-* `DEFAULT_WORKSPACE`: Pasta padrão onde o assistente opera.
-* `CLOUDFLARE_TUNNEL_TOKEN`: Caso você possua um domínio próprio e túnel configurado na Cloudflare.
-* `ALLOWED_EMAILS`: Lista de e-mails autorizados (padrão: qualquer e-mail conectado ao `agy`).
+Copie o arquivo `.env.example` para `.env` para personalizar parâmetros de execução:
+* `PORT`: Porta de escuta local (padrão: `4040`).
+* `DEFAULT_WORKSPACE`: Diretório raiz padrão para navegação e comandos.
+* `CLOUDFLARE_TUNNEL_TOKEN`: Token dedicado para túneis corporativos nomeados.
+* `ALLOWED_EMAILS`: Lista restrita de e-mails autorizados para acesso via WebSocket.
 
 ---
 
-## 📁 Estrutura de Arquivos
+## Estrutura do Projeto
 
 ```text
 antigravity-server/
 ├── antigravity-server      # Binário Go compilado de alta performance
-├── install.sh              # Script instalador automático
-├── start.sh                # Inicializador com túnel e QR Code
-├── .env.example            # Exemplo de configurações opcionais
+├── install.sh              # Script instalador para Linux e macOS
+├── start.sh                # Inicializador de serviço com túnel e QR Code
+├── install.ps1             # Script instalador nativo para Windows
+├── start.ps1               # Inicializador de serviço para Windows
+├── .env.example            # Template de variáveis de ambiente
 ├── web/                    # Interface web compilada (fallback)
-├── bin/                    # Binários utilitários (cloudflared)
+├── bin/                    # Binários utilitários complementares
 ├── data/                   # Banco de dados SQLite local
-└── uploads/                # Armazenamento de arquivos enviados
+└── uploads/                # Armazenamento de arquivos anexados
 ```
+
+---
+
+<div align="center">
+
+Desenvolvido por WebuildSoft • Licença MIT • 2026
+
+</div>
