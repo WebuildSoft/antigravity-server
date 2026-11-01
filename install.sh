@@ -158,6 +158,14 @@ fi
 # ------------------------------------------------------------------------------
 echo -e "\n${BOLD}[4/4] Configurando arquivos e executável...${RESET}"
 
+# Se existir um subdiretório 'antigravity-server' remanescente de descompactação anterior, corrigir
+if [ -d "$SCRIPT_DIR/antigravity-server" ]; then
+    if [ -d "$SCRIPT_DIR/antigravity-server/web" ] && [ ! -d "$SCRIPT_DIR/web" ]; then
+        cp -R "$SCRIPT_DIR/antigravity-server/web" "$SCRIPT_DIR/"
+    fi
+    rm -rf "$SCRIPT_DIR/antigravity-server"
+fi
+
 if [ ! -f "$SCRIPT_DIR/web/index.html" ]; then
     echo -e "      ${CYAN}⬇ Baixando interface web do Antigravity (Flutter Web)...${RESET}"
     ZIP_OS="$OS"
@@ -166,8 +174,14 @@ if [ ! -f "$SCRIPT_DIR/web/index.html" ]; then
     fi
     PKG_URL="https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-${ZIP_OS}.zip"
     curl -# -fSL "$PKG_URL" -o /tmp/antigravity-server.zip
-    unzip -q -o /tmp/antigravity-server.zip -d "$SCRIPT_DIR"
-    rm -f /tmp/antigravity-server.zip
+    mkdir -p /tmp/antigravity_pkg_extract
+    unzip -q -o /tmp/antigravity-server.zip -d /tmp/antigravity_pkg_extract
+    if [ -d "/tmp/antigravity_pkg_extract/antigravity-server/web" ]; then
+        cp -R /tmp/antigravity_pkg_extract/antigravity-server/web "$SCRIPT_DIR/"
+    elif [ -d "/tmp/antigravity_pkg_extract/web" ]; then
+        cp -R /tmp/antigravity_pkg_extract/web "$SCRIPT_DIR/"
+    fi
+    rm -rf /tmp/antigravity_pkg_extract /tmp/antigravity-server.zip
     echo -e "      ${GREEN}✓ Interface web pronta em web/${RESET}"
 else
     echo -e "      ${GREEN}✓ Interface web pronta em web/${RESET}"

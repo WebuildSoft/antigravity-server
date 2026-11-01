@@ -114,6 +114,13 @@ fi
 # ------------------------------------------------------------------------------
 # Iniciar Servidor Go
 # ------------------------------------------------------------------------------
+if [ -d "$SCRIPT_DIR/antigravity-server" ]; then
+    if [ -d "$SCRIPT_DIR/antigravity-server/web" ] && [ ! -d "$SCRIPT_DIR/web" ]; then
+        cp -R "$SCRIPT_DIR/antigravity-server/web" "$SCRIPT_DIR/"
+    fi
+    rm -rf "$SCRIPT_DIR/antigravity-server"
+fi
+
 if [ ! -f "$SCRIPT_DIR/antigravity-server" ]; then
     OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
     ARCH="$(uname -m)"

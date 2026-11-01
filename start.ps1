@@ -150,6 +150,13 @@ if (Test-Path $cfBin) {
 # ------------------------------------------------------------------------------
 # Iniciar Servidor Executavel
 # ------------------------------------------------------------------------------
+if (Test-Path "$scriptDir\antigravity-server" -PathType Container) {
+    if (Test-Path "$scriptDir\antigravity-server\web" -and -not (Test-Path "$scriptDir\web")) {
+        Copy-Item -Path "$scriptDir\antigravity-server\web" -Destination $scriptDir -Recurse -Force
+    }
+    Remove-Item -Path "$scriptDir\antigravity-server" -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 $serverExe = "$scriptDir\antigravity-server.exe"
 if (-not (Test-Path $serverExe)) {
     $prebuilt = "$scriptDir\bin\antigravity-server-windows-amd64.exe"

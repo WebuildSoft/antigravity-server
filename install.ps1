@@ -149,18 +149,33 @@ $startPs1Url = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server
 $startBatUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.bat"
 $envExUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/.env.example"
 
+# Se existir um subdiretorio 'antigravity-server' remanescente de descompactacao anterior, corrigir
+if (Test-Path "$scriptDir\antigravity-server" -PathType Container) {
+    if (Test-Path "$scriptDir\antigravity-server\web" -and -not (Test-Path "$scriptDir\web")) {
+        Copy-Item -Path "$scriptDir\antigravity-server\web" -Destination $scriptDir -Recurse -Force
+    }
+    Remove-Item -Path "$scriptDir\antigravity-server" -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 # Baixar pacote da interface web se nao existir
 if (-not (Test-Path "$scriptDir\web\index.html")) {
     Write-Host "      Baixando interface web do Antigravity (Flutter Web)..." -ForegroundColor Cyan
     $pkgUrl = "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-windows.zip"
     $pkgZip = Join-Path $env:TEMP "antigravity-server-windows.zip"
+    $pkgExtract = Join-Path $env:TEMP "antigravity_pkg_extract"
+    if (Test-Path $pkgExtract) { Remove-Item -Path $pkgExtract -Recurse -Force -ErrorAction SilentlyContinue }
     if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
         curl.exe -# -fSL "$pkgUrl" -o "$pkgZip"
     } else {
         Invoke-WebRequest -Uri $pkgUrl -OutFile $pkgZip -UseBasicParsing
     }
-    Expand-Archive -Path $pkgZip -DestinationPath $scriptDir -Force
-    Remove-Item -Path $pkgZip -Force -ErrorAction SilentlyContinue
+    Expand-Archive -Path $pkgZip -DestinationPath $pkgExtract -Force
+    if (Test-Path "$pkgExtract\antigravity-server\web") {
+        Copy-Item -Path "$pkgExtract\antigravity-server\web" -Destination $scriptDir -Recurse -Force
+    } elseif (Test-Path "$pkgExtract\web") {
+        Copy-Item -Path "$pkgExtract\web" -Destination $scriptDir -Recurse -Force
+    }
+    Remove-Item -Path $pkgZip, $pkgExtract -Recurse -Force -ErrorAction SilentlyContinue
     Write-Host "      [OK] Interface web pronta em web/" -ForegroundColor Green
 } else {
     Write-Host "      [OK] Interface web pronta em web/" -ForegroundColor Green
