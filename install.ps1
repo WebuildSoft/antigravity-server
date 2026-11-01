@@ -7,28 +7,15 @@ Write-Host "============================================================" -Foreg
 Write-Host "    INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE (WINDOWS)     " -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 
-# 1. Definir diretorio de instalacao e baixar pacote limpo de producao
+# 1. Definir diretorio de instalacao
 $scriptDir = $PSScriptRoot
-if (-not $scriptDir -or -not (Test-Path "$scriptDir\antigravity-server.exe")) {
+if (-not $scriptDir -or -not (Test-Path "$scriptDir\start.ps1")) {
     $scriptDir = Join-Path $HOME "antigravity-server"
-    if (-not (Test-Path $scriptDir)) {
-        New-Item -ItemType Directory -Force -Path $scriptDir | Out-Null
-    }
-
-    if (-not (Test-Path "$scriptDir\antigravity-server.exe")) {
-        Write-Host "Baixando pacote oficial do servidor para Windows..." -ForegroundColor Cyan
-        $zipUrl = "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-windows.zip"
-        $zipPath = Join-Path $env:TEMP "antigravity-server-windows.zip"
-        if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-            curl.exe -# -fSL "$zipUrl" -o "$zipPath"
-        } else {
-            Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
-        }
-        Expand-Archive -Path $zipPath -DestinationPath $HOME -Force
-        Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
-    }
 }
 
+if (-not (Test-Path $scriptDir)) {
+    New-Item -ItemType Directory -Force -Path $scriptDir | Out-Null
+}
 Set-Location $scriptDir
 
 # Criar pastas locais
@@ -145,12 +132,25 @@ if (-not (Test-Path $cfPath)) {
 }
 
 # ------------------------------------------------------------------------------
-# 4. Configurar Arquivo .env e Binario Executavel
+# 4. Baixar / Atualizar Arquivos do Servidor (start.ps1, start.bat, executavel)
 # ------------------------------------------------------------------------------
-Write-Host "`n[3/4] Configurando arquivos e executavel..." -ForegroundColor Cyan
-if (-not (Test-Path "$scriptDir\.env") -and (Test-Path "$scriptDir\.env.example")) {
-    Copy-Item "$scriptDir\.env.example" "$scriptDir\.env"
-    Write-Host "      [OK] Arquivo .env criado a partir de .env.example" -ForegroundColor Green
+Write-Host "`n[3/4] Configurando arquivos e executavel do servidor..." -ForegroundColor Cyan
+
+# Baixar start.ps1 e start.bat atualizados diretamente do repositorio oficial
+$startPs1Url = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.ps1"
+$startBatUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.bat"
+$envExUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/.env.example"
+
+Invoke-WebRequest -Uri $startPs1Url -OutFile "$scriptDir\start.ps1" -UseBasicParsing
+Invoke-WebRequest -Uri $startBatUrl -OutFile "$scriptDir\start.bat" -UseBasicParsing
+
+if (-not (Test-Path "$scriptDir\.env")) {
+    if (Test-Path "$scriptDir\.env.example") {
+        Copy-Item "$scriptDir\.env.example" "$scriptDir\.env"
+    } else {
+        Invoke-WebRequest -Uri $envExUrl -OutFile "$scriptDir\.env" -UseBasicParsing
+    }
+    Write-Host "      [OK] Arquivo .env configurado com sucesso" -ForegroundColor Green
 }
 
 $serverExe = "$scriptDir\antigravity-server.exe"
@@ -158,16 +158,19 @@ if (-not (Test-Path $serverExe)) {
     $prebuilt = "$scriptDir\bin\antigravity-server-windows-amd64.exe"
     if (Test-Path $prebuilt) {
         Copy-Item $prebuilt $serverExe -Force
-        Write-Host "      [OK] Utilizando executavel do servidor" -ForegroundColor Green
+        Write-Host "      [OK] Utilizando executavel local" -ForegroundColor Green
     } else {
+        Write-Host "      Baixando executavel oficial do servidor..." -ForegroundColor Cyan
         $repoExeUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-windows-amd64.exe"
         if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
             curl.exe -# -fSL "$repoExeUrl" -o "$serverExe"
         } else {
             Invoke-WebRequest -Uri $repoExeUrl -OutFile $serverExe -UseBasicParsing
         }
-        Write-Host "      [OK] Executavel baixado com sucesso" -ForegroundColor Green
+        Write-Host "      [OK] Executavel antigravity-server.exe pronto" -ForegroundColor Green
     }
+} else {
+    Write-Host "      [OK] Executavel antigravity-server.exe pronto" -ForegroundColor Green
 }
 
 Write-Host "`n============================================================" -ForegroundColor Green

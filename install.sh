@@ -36,29 +36,19 @@ case "$ARCH" in
         ;;
 esac
 
-# 2. Definir diretório e baixar pacote de produção se não estiver na pasta do servidor
+# 2. Definir diretório de instalação
 if [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 else
     SCRIPT_DIR="$PWD"
 fi
 
-if [ ! -f "$SCRIPT_DIR/antigravity-server" ] && [ ! -f "$SCRIPT_DIR/start.sh" ]; then
-    INSTALL_TARGET="$HOME/antigravity-server"
-    mkdir -p "$INSTALL_TARGET"
-    if [ ! -f "$INSTALL_TARGET/antigravity-server" ]; then
-        echo -e "${CYAN}⬇ Baixando pacote oficial do servidor para ${OS}...${RESET}"
-        ZIP_URL="https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-${OS}.zip"
-        curl -# -fSL "$ZIP_URL" -o /tmp/antigravity-server.zip
-        unzip -q -o /tmp/antigravity-server.zip -d "$HOME"
-        rm -f /tmp/antigravity-server.zip
-    fi
-    cd "$INSTALL_TARGET"
-    SCRIPT_DIR="$INSTALL_TARGET"
-else
-    cd "$SCRIPT_DIR"
+if [ ! -f "$SCRIPT_DIR/start.sh" ]; then
+    SCRIPT_DIR="$HOME/antigravity-server"
+    mkdir -p "$SCRIPT_DIR"
 fi
 
+cd "$SCRIPT_DIR"
 mkdir -p bin data uploads
 
 echo -e "${BOLD}[1/4] Sistema:${RESET} ${GREEN}${OS}${RESET} (${GREEN}${ARCH}${RESET})"
@@ -164,13 +154,16 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 5. Configurar Arquivo .env e Executável
+# 5. Baixar / Atualizar start.sh, .env e Executável
 # ------------------------------------------------------------------------------
-echo -e "\n${BOLD}[4/4] Finalizando configurações...${RESET}"
+echo -e "\n${BOLD}[4/4] Configurando arquivos e executável...${RESET}"
 
-if [ ! -f "$SCRIPT_DIR/.env" ] && [ -f "$SCRIPT_DIR/.env.example" ]; then
-    cp "$SCRIPT_DIR/.env.example" "$SCRIPT_DIR/.env"
-    echo -e "      ${GREEN}✓ Arquivo .env criado a partir de .env.example${RESET}"
+curl -fsSL "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.sh" -o "$SCRIPT_DIR/start.sh"
+chmod +x "$SCRIPT_DIR/start.sh"
+
+if [ ! -f "$SCRIPT_DIR/.env" ]; then
+    curl -fsSL "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/.env.example" -o "$SCRIPT_DIR/.env"
+    echo -e "      ${GREEN}✓ Arquivo .env configurado com sucesso${RESET}"
 fi
 
 if [ ! -f "$SCRIPT_DIR/antigravity-server" ]; then
@@ -178,14 +171,14 @@ if [ ! -f "$SCRIPT_DIR/antigravity-server" ]; then
     if [ -f "$PREBUILT" ]; then
         echo -e "      ${GREEN}✓ Utilizando binário pré-compilado para ${OS}-${GO_ARCH}${RESET}"
         cp "$PREBUILT" "$SCRIPT_DIR/antigravity-server"
-        chmod +x "$SCRIPT_DIR/antigravity-server"
+    else
+        echo -e "      ${CYAN}⬇ Baixando executável do servidor para ${OS}-${GO_ARCH}...${RESET}"
+        EXE_URL="https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-${OS}-${GO_ARCH}"
+        curl -# -fSL "$EXE_URL" -o "$SCRIPT_DIR/antigravity-server"
+        echo -e "      ${GREEN}✓ Executável antigravity-server pronto${RESET}"
     fi
 fi
-
-chmod +x "$SCRIPT_DIR/start.sh" 2>/dev/null || true
-if [ -f "$SCRIPT_DIR/antigravity-server" ]; then
-    chmod +x "$SCRIPT_DIR/antigravity-server"
-fi
+chmod +x "$SCRIPT_DIR/antigravity-server"
 
 echo -e "\n${BOLD}${GREEN}============================================================"
 echo "    🎉 INSTALAÇÃO CONCLUÍDA COM SUCESSO!                    "
