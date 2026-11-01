@@ -167,12 +167,12 @@ else
     DOWNLOAD_URL=""
     if [ "$OS" = "darwin" ]; then
         DOWNLOAD_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-${CLOUDFLARED_ARCH}.tgz"
-        curl -fsSL "$DOWNLOAD_URL" -o /tmp/cloudflared.tgz
+        curl -# -fSL "$DOWNLOAD_URL" -o /tmp/cloudflared.tgz
         tar -xzf /tmp/cloudflared.tgz -C "$SCRIPT_DIR/bin/"
         rm -f /tmp/cloudflared.tgz
     else
         DOWNLOAD_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${CLOUDFLARED_ARCH}"
-        curl -fsSL "$DOWNLOAD_URL" -o "$CLOUDFLARED_BIN"
+        curl -# -fSL "$DOWNLOAD_URL" -o "$CLOUDFLARED_BIN"
     fi
     chmod +x "$CLOUDFLARED_BIN"
     echo -e "      ${GREEN}✓ cloudflared baixado com sucesso em bin/cloudflared${RESET}"

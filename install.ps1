@@ -26,7 +26,11 @@ if (-not $scriptDir -or -not (Test-Path "$scriptDir\go.mod")) {
         } else {
             Write-Host "Git nao encontrado. Baixando arquivos compactados..." -ForegroundColor Yellow
             $zipPath = Join-Path $env:TEMP "antigravity-server.zip"
-            Invoke-WebRequest -Uri "https://github.com/WebuildSoft/antigravity-server/archive/refs/heads/main.zip" -OutFile $zipPath
+            if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+                curl.exe -# -fSL "https://github.com/WebuildSoft/antigravity-server/archive/refs/heads/main.zip" -o "$zipPath"
+            } else {
+                Invoke-WebRequest -Uri "https://github.com/WebuildSoft/antigravity-server/archive/refs/heads/main.zip" -OutFile "$zipPath"
+            }
             Expand-Archive -Path $zipPath -DestinationPath $env:TEMP -Force
             Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
             Move-Item -Path (Join-Path $env:TEMP "antigravity-server-main") -Destination $scriptDir -Force
@@ -72,7 +76,8 @@ if (-not $agyPath) {
     Write-Host "      [!] Antigravity CLI ('agy') nao encontrado no sistema." -ForegroundColor Yellow
     Write-Host "      Baixando e instalando o Antigravity CLI ('agy') automaticamente..." -ForegroundColor Cyan
     try {
-        Invoke-Expression (Invoke-RestMethod -Uri "https://antigravity.google/cli/install.ps1")
+        $installerScript = Invoke-RestMethod -Uri "https://antigravity.google/cli/install.ps1"
+        Invoke-Expression $installerScript 2>$null
         $installedAgy = Join-Path $env:LOCALAPPDATA "agy\bin\agy.exe"
         if (Test-Path $installedAgy) {
             $agyPath = $installedAgy
@@ -96,7 +101,8 @@ if ($agyPath) {
     Write-Host "`nVerificando autenticacao Google no Antigravity..." -ForegroundColor Cyan
     $authOk = $false
     try {
-        $p = Start-Process -FilePath $agyPath -ArgumentList "models" -NoNewWindow -Wait -PassThru -ErrorAction SilentlyContinue
+        $modelsLog = Join-Path $env:TEMP "agy_models.txt"
+        $p = Start-Process -FilePath $agyPath -ArgumentList "models" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $modelsLog -ErrorAction SilentlyContinue
         if ($p.ExitCode -eq 0) {
             $authOk = $true
         }
@@ -136,7 +142,11 @@ if (-not (Test-Path $cfPath)) {
     } else {
         Write-Host "      [!] Baixando binario oficial seguro do Cloudflare Tunnel..." -ForegroundColor Yellow
         $cfUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
-        Invoke-WebRequest -Uri $cfUrl -OutFile $cfPath -UseBasicParsing
+        if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+            curl.exe -# -fSL "$cfUrl" -o "$cfPath"
+        } else {
+            Invoke-WebRequest -Uri $cfUrl -OutFile $cfPath -UseBasicParsing
+        }
         Write-Host "      [OK] cloudflared baixado com sucesso em bin\cloudflared.exe" -ForegroundColor Green
     }
 } else {
@@ -164,7 +174,11 @@ if (-not (Test-Path $serverExe)) {
     } else {
         Write-Host "      Baixando executavel do servidor direto do repositorio..." -ForegroundColor Cyan
         $repoExeUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-windows-amd64.exe"
-        Invoke-WebRequest -Uri $repoExeUrl -OutFile $serverExe -UseBasicParsing
+        if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+            curl.exe -# -fSL "$repoExeUrl" -o "$serverExe"
+        } else {
+            Invoke-WebRequest -Uri $repoExeUrl -OutFile $serverExe -UseBasicParsing
+        }
     }
 }
 
