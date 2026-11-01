@@ -182,6 +182,10 @@ func handleVersionNotify(w http.ResponseWriter, r *http.Request) {
 	}
 	vData := services.LoadVersionData()
 	fmt.Printf("[WS] 📢 Broadcasting new version: v%s (Build %d)\n", vData.Version, vData.Build)
+	services.Manager.BroadcastAll(map[string]interface{}{
+		"type":       "app_version_update",
+		"appVersion": vData,
+	})
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"success":    true,
