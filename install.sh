@@ -28,13 +28,21 @@ fi
 if [ ! -f "$SCRIPT_DIR/go.mod" ] && [ ! -f "$SCRIPT_DIR/start.sh" ]; then
     INSTALL_TARGET="$SCRIPT_DIR/antigravity-server"
     echo -e "${CYAN}📦 Repositório não detectado na pasta atual.${RESET}"
-    echo -e "${CYAN}⬇ Baixando repositório oficial em: ${INSTALL_TARGET}...${RESET}"
-    if command -v git >/dev/null 2>&1; then
-        git clone https://github.com/WebuildSoft/antigravity-server.git "$INSTALL_TARGET"
+    if [ -d "$INSTALL_TARGET/.git" ]; then
+        echo -e "${CYAN}🔄 Atualizando repositório existente em: ${INSTALL_TARGET}...${RESET}"
+        (cd "$INSTALL_TARGET" && git pull --quiet origin main || true)
+    elif [ -d "$INSTALL_TARGET" ] && [ -f "$INSTALL_TARGET/go.mod" ]; then
+        echo -e "${GREEN}✓ Pasta do repositório já encontrada em: ${INSTALL_TARGET}${RESET}"
     else
-        echo -e "${YELLOW}Git não encontrado. Baixando arquivos via tarball...${RESET}"
-        mkdir -p "$INSTALL_TARGET"
-        curl -fsSL https://github.com/WebuildSoft/antigravity-server/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C "$INSTALL_TARGET"
+        echo -e "${CYAN}⬇ Baixando repositório oficial em: ${INSTALL_TARGET}...${RESET}"
+        if command -v git >/dev/null 2>&1; then
+            rm -rf "$INSTALL_TARGET" 2>/dev/null || true
+            git clone --quiet https://github.com/WebuildSoft/antigravity-server.git "$INSTALL_TARGET"
+        else
+            echo -e "${YELLOW}Git não encontrado. Baixando arquivos via tarball...${RESET}"
+            mkdir -p "$INSTALL_TARGET"
+            curl -fsSL https://github.com/WebuildSoft/antigravity-server/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C "$INSTALL_TARGET"
+        fi
     fi
     cd "$INSTALL_TARGET"
     SCRIPT_DIR="$INSTALL_TARGET"
