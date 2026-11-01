@@ -4,7 +4,7 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "    INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE (WINDOWS)     " -ForegroundColor Cyan
+Write-Host "   INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE v1.4.0 (WIN)   " -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 
 # 1. Definir diretorio de instalacao

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -104,11 +105,24 @@ func main() {
 
 	ips := services.GetNetworkAddresses()
 
-	fmt.Printf("\n🚀 Antigravity Mobile Bridge listening on port %s (Go v2.0)\n", port)
-	fmt.Printf("Local endpoints:\n")
+	vInfo := services.LoadVersionData()
+	ver := vInfo.Version
+	if ver == "" {
+		ver = "1.4.0"
+	}
+	build := vInfo.Build
+	if build == 0 {
+		build = 24
+	}
+
+	fmt.Println("\n============================================================")
+	fmt.Printf("🚀 Antigravity Mobile Server v%s (Build #%d)\n", ver, build)
+	fmt.Printf("   Porta: %s | SO: %s/%s | Backend: Go Engine v2.0\n", port, runtime.GOOS, runtime.GOARCH)
+	fmt.Println("============================================================")
+	fmt.Printf("Endpoints Locais:\n")
 	fmt.Printf("  - Local:   http://localhost:%s\n", port)
 	for _, ip := range ips {
-		fmt.Printf("  - Network: http://%s:%s (ws://%s:%s/ws)\n", ip.Address, port, ip.Address, port)
+		fmt.Printf("  - Rede:    http://%s:%s (ws://%s:%s/ws)\n", ip.Address, port, ip.Address, port)
 	}
 
 	// Print QR Code

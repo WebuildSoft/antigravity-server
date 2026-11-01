@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
-  "build": 23,
-  "releasedAt": "2026-11-01T00:12:44Z",
-  "changelog": "Confirmacao de e-mail obrigatoria, onboarding de conexao e leitor de QR Code por camera",
+  "build": 24,
+  "releasedAt": "2026-11-01T01:00:00Z",
+  "changelog": "Suporte a Windows, Linux e macOS com quick tunnel Cloudflare HTTP/2 e telemetria transparente",
   "downloadUrl": "/baixar"
 }
