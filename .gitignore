@@ -1,0 +1,28 @@
+# ==============================================================================
+# Git Ignore - Antigravity Server
+# ==============================================================================
+
+# Arquivo de credenciais e segredos locais (NUNCA COMPARTILHE!)
+.env
+
+# Banco de dados SQLite local (contém histórico de conversas e mensagens)
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Arquivos e fotos enviadas pelos usuários
+uploads/
+
+# Binário compilado localmente
+antigravity-server
+*.apk
+app-release.apk
+
+# Logs e arquivos temporários
+*.log
+/tmp/
+
+# Arquivos do sistema operacional (macOS)
+.DS_Store
+.localized
