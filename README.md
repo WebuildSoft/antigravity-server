@@ -20,7 +20,7 @@ Abra o **PowerShell** e cole o comando de linha única:
 ```powershell
 irm https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/install.ps1 | iex
 ```
-*(Ou dê dois cliques em `start.bat` se baixou o `.zip`)*
+*(Ou dê dois cliques em `start.bat` se baixou o `.zip` ou execute `.\start.ps1`)*
 
 ---
 
@@ -33,11 +33,49 @@ irm https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/instal
 
 ---
 
-### 3. Rodar Testes de Segurança em Modo Dev
-Para validar se as camadas de proteção estão ativas e funcionando:
-```bash
-./test-dev.sh
+## 🛠️ Resolução de Dúvidas e Problemas Comuns
+
+### 🛡️ 1. O Windows Defender ou Antivírus bloqueou o `start.bat`?
+* **Motivo:** O binário é open source recente sem certificado comercial pago da Microsoft e o `.bat` usa `-ExecutionPolicy Bypass`.
+* **Se o SmartScreen aparecer:** Clique em **"Mais informações"** > **"Executar assim mesmo"**.
+* **Se o antivírus bloquear:** Acesse *Segurança do Windows > Proteção contra vírus e ameaças > Histórico de proteção > Ações > Restaurar*.
+* **Melhor alternativa:** Abra a pasta no PowerShell e rode o script nativo diretamente:
+  ```powershell
+  .\start.ps1
+  ```
+
+---
+
+### 🔑 2. Como conectar a conta Google no Antigravity CLI (`agy`)?
+> 🛑 **Atenção:** O comando `agy auth login` **não existe** e retornará erro.
+
+* Para conectar ou autorizar sua conta Google, digite no terminal do seu computador:
+  ```bash
+  agy
+  ```
+  O Antigravity abrirá e fornecerá a janela/link oficial do Google para autorizar seu acesso no navegador.
+* **Como testar se está tudo certo:**
+  Digite no terminal:
+  ```bash
+  agy models
+  ```
+  Se a lista de modelos de IA for exibida, sua máquina está pronta para responder ao celular!
+
+---
+
+### 🧱 3. O celular não conecta no Wi-Fi? (Liberar o Firewall na Porta 4040)
+Se o firewall do Windows bloqueou a porta local `4040`, abra o **PowerShell como Administrador** e execute:
+```powershell
+New-NetFirewallRule -DisplayName "Antigravity Server (Porta 4040)" -Direction Inbound -LocalPort 4040 -Protocol TCP -Action Allow
 ```
+*(No Linux com UFW ativo: `sudo ufw allow 4040/tcp`)*.
+
+---
+
+### 🌐 4. Usando fora de casa ou em Wi-Fi de Faculdade/Empresa (Túnel Cloudflare)
+Se você estiver no 4G/5G ou em redes com **Isolamento de AP** (onde o roteador impede dispositivos de se comunicarem diretamente):
+- O servidor gera automaticamente uma URL de túnel seguro com final `.trycloudflare.com`.
+- Basta escanear o QR Code de túnel no celular para se conectar de qualquer lugar do mundo.
 
 ---
 
