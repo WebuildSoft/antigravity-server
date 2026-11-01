@@ -76,11 +76,15 @@ $publicUrl = $null
 if (Test-Path $cfBin) {
     Write-Host "Iniciando Quick Tunnel Cloudflare (Zero-Config)..." -ForegroundColor Cyan
     $tunnelLog = Join-Path $env:TEMP "cf_quick_tunnel_$port.log"
+    $tunnelOut = Join-Path $env:TEMP "cf_out_$port.log"
     if (Test-Path $tunnelLog) {
         Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue
     }
+    if (Test-Path $tunnelOut) {
+        Remove-Item $tunnelOut -Force -ErrorAction SilentlyContinue
+    }
 
-    $cfProcess = Start-Process -FilePath $cfBin -ArgumentList "tunnel", "--url", "http://localhost:$port" -RedirectStandardError $tunnelLog -NoNewWindow -PassThru
+    $cfProcess = Start-Process -FilePath $cfBin -ArgumentList "tunnel", "--url", "http://127.0.0.1:$port", "--protocol", "http2" -RedirectStandardError $tunnelLog -RedirectStandardOutput $tunnelOut -WindowStyle Hidden -PassThru
 
     Write-Host -NoNewline "Aguardando URL publica do tunel" -ForegroundColor Yellow
     for ($i = 0; $i -lt 25; $i++) {

@@ -79,7 +79,7 @@ elif [ -n "$CLOUDFLARED" ] && [ -x "$CLOUDFLARED" ]; then
     echo -e "${CYAN}Iniciando Quick Tunnel gratuito Cloudflare (Zero-Config)...${RESET}"
     TUNNEL_LOG="/tmp/cf_quick_tunnel_${PORT}.log"
     rm -f "$TUNNEL_LOG"
-    "$CLOUDFLARED" tunnel --url "http://localhost:${PORT}" > "$TUNNEL_LOG" 2>&1 &
+    "$CLOUDFLARED" tunnel --url "http://127.0.0.1:${PORT}" --protocol http2 > "$TUNNEL_LOG" 2>&1 &
     TUNNEL_PID=$!
 
     echo -ne "Aguardando URL pública do túnel"

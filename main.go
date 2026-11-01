@@ -69,7 +69,7 @@ func main() {
 	var listener net.Listener
 	var finalPort int
 	for p := startPort; p < startPort+50; p++ {
-		l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", p))
+		l, err := net.Listen("tcp", fmt.Sprintf(":%d", p))
 		if err == nil {
 			listener = l
 			finalPort = p
