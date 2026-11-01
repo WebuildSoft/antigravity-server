@@ -90,6 +90,8 @@ func detectAgyBinary(home string) string {
 		return pathAgy
 	}
 	candidates := []string{
+		filepath.Join(home, "AppData", "Local", "agy", "bin", "agy.exe"),
+		filepath.Join(home, "AppData", "Local", "agy", "bin", "agy"),
 		filepath.Join(home, ".local", "bin", "agy"),
 		filepath.Join(home, ".local", "bin", "agy.exe"),
 		filepath.Join(home, ".gemini", "antigravity-cli", "bin", "agy"),

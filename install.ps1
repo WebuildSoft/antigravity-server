@@ -50,6 +50,7 @@ if (Get-Command agy.exe -ErrorAction SilentlyContinue) {
     $agyPath = (Get-Command agy).Source
 } else {
     $candidates = @(
+        "$env:LOCALAPPDATA\agy\bin\agy.exe",
         "$HOME\.local\bin\agy.exe",
         "$HOME\.gemini\antigravity-cli\bin\agy.exe",
         "$env:LOCALAPPDATA\Programs\antigravity\bin\agy.exe",
@@ -64,6 +65,25 @@ if (Get-Command agy.exe -ErrorAction SilentlyContinue) {
             }
             break
         }
+    }
+}
+
+if (-not $agyPath) {
+    Write-Host "      [!] Antigravity CLI ('agy') nao encontrado no sistema." -ForegroundColor Yellow
+    Write-Host "      Baixando e instalando o Antigravity CLI ('agy') automaticamente..." -ForegroundColor Cyan
+    try {
+        Invoke-Expression (Invoke-RestMethod -Uri "https://antigravity.google/cli/install.ps1")
+        $installedAgy = Join-Path $env:LOCALAPPDATA "agy\bin\agy.exe"
+        if (Test-Path $installedAgy) {
+            $agyPath = $installedAgy
+            $agyDir = Split-Path $agyPath
+            if ($env:PATH -notlike "*$agyDir*") {
+                $env:PATH = "$agyDir;$env:PATH"
+            }
+            Write-Host "      [OK] agy instalado com sucesso em: $agyPath" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "      [!] Tentativa de auto-instalacao do agy: $_" -ForegroundColor Yellow
     }
 }
 

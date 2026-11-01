@@ -100,7 +100,8 @@ func (s *Session) ExecuteTurn(task AgentTask) {
 	home, _ := os.UserHomeDir()
 	geminiBin := filepath.Join(home, ".gemini", "antigravity-cli", "bin")
 	localBin := filepath.Join(home, ".local", "bin")
-	pathEnv := strings.Join([]string{geminiBin, localBin, os.Getenv("PATH")}, string(os.PathListSeparator))
+	agyWinBin := filepath.Join(home, "AppData", "Local", "agy", "bin")
+	pathEnv := strings.Join([]string{geminiBin, localBin, agyWinBin, os.Getenv("PATH")}, string(os.PathListSeparator))
 	cmd.Env = append(os.Environ(),
 		"PATH="+pathEnv,
 		"PYTHONUNBUFFERED=1",
