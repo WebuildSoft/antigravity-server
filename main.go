@@ -28,7 +28,7 @@ func printQRCode(targetURL string) {
 	fmt.Println("  (Abra o app no celular e escaneie o código abaixo)")
 	fmt.Println("============================================================")
 	fmt.Print(qr.ToSmallString(false))
-	fmt.Println("============================================================\n")
+	fmt.Print("============================================================\n\n")
 }
 
 func main() {

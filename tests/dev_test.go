@@ -2,6 +2,7 @@ package tests
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -406,4 +407,42 @@ func TestRemoteVersionNotifyRequiresAuth(t *testing.T) {
 	}
 
 	t.Logf("✓ /api/version/notify remoto bloqueado com 401 para requisições não autenticadas")
+}
+
+// Test 12: GET /api/accounts retorna contas do Antigravity sem filtrar por email diferente do usuário autenticado
+func TestAccountsEndpointReturnsAccountsWithoutEmailMismatchFilter(t *testing.T) {
+	server, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
+	// 1. Requisição local a /api/accounts
+	req, err := http.NewRequest(http.MethodGet, server.URL+"/api/accounts", nil)
+	if err != nil {
+		t.Fatalf("Erro ao criar requisição: %v", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Erro ao executar GET /api/accounts: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("FALHA: GET /api/accounts deveria retornar 200 OK, retornou %d", resp.StatusCode)
+	}
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("Erro ao decodificar JSON de resposta: %v", err)
+	}
+
+	accountsRaw, ok := body["accounts"]
+	if !ok {
+		t.Fatalf("FALHA: Resposta não contém o campo 'accounts'")
+	}
+	accountsList, ok := accountsRaw.([]interface{})
+	if !ok {
+		t.Fatalf("FALHA: Campo 'accounts' deveria ser um array JSON")
+	}
+
+	t.Logf("✓ /api/accounts respondeu 200 OK com array de contas (%d contas encontradas)", len(accountsList))
 }

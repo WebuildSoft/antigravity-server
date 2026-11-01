@@ -56,36 +56,90 @@ var textExtensions = map[string]bool{
 	".go": true, ".mod": true, ".sum": true,
 }
 
-func resolveSafePath(targetPath, workspaceRoot string) (string, error) {
-	if workspaceRoot == "" {
-		workspaceRoot = config.AppConfig.DefaultWorkspace
+// ExpandHome expande com segurança "~" ou caminhos com prefixo "~/" ou "~\"
+// para o diretório pessoal do usuário de forma agnóstica de SO (Linux, macOS e Windows).
+func ExpandHome(pathStr string) (string, error) {
+	clean := strings.TrimSpace(pathStr)
+	if clean == "" {
+		return "", nil
 	}
+	if clean == "~" {
+		home, err := os.UserHomeDir()
+		if err != nil || home == "" {
+			home = os.Getenv("HOME")
+		}
+		if home == "" {
+			return "", errors.New("unable to determine user home directory")
+		}
+		return filepath.Clean(home), nil
+	}
+	if strings.HasPrefix(clean, "~/") || strings.HasPrefix(clean, `~\`) {
+		home, err := os.UserHomeDir()
+		if err != nil || home == "" {
+			home = os.Getenv("HOME")
+		}
+		if home == "" {
+			return "", errors.New("unable to determine user home directory")
+		}
+		return filepath.Clean(filepath.Join(home, clean[2:])), nil
+	}
+	return filepath.Clean(clean), nil
+}
+
+func resolveSafePath(targetPath, workspaceRoot string) (string, string, error) {
+	workspaceRoot = strings.TrimSpace(workspaceRoot)
+	targetPath = strings.TrimSpace(targetPath)
+
+	// Se o workspace vier vazio, "~" ou ".", utiliza o DefaultWorkspace
+	if workspaceRoot == "" || workspaceRoot == "~" || workspaceRoot == "." {
+		workspaceRoot = config.AppConfig.DefaultWorkspace
+	} else {
+		// Tenta expandir o til se o usuário passou algo como "~/projetos"
+		expanded, expErr := ExpandHome(workspaceRoot)
+		if expErr == nil && expanded != "" {
+			workspaceRoot = expanded
+		}
+	}
+
 	root, err := filepath.Abs(workspaceRoot)
 	if err != nil {
-		return "", err
+		return "", "", fmt.Errorf("invalid workspace root: %w", err)
 	}
 
 	// Security: validate that workspaceRoot is within allowed default workspace boundary
 	defaultRoot, err := filepath.Abs(config.AppConfig.DefaultWorkspace)
 	if err == nil && defaultRoot != "" && defaultRoot != "/" {
 		if root != defaultRoot && !strings.HasPrefix(root, defaultRoot+string(filepath.Separator)) {
-			return "", errors.New("access denied: workspace is outside allowed boundary")
+			return "", "", errors.New("access denied: workspace is outside allowed boundary")
 		}
 	}
 
-	resolved, err := filepath.Abs(filepath.Join(root, targetPath))
+	// Tratar targetPath se vier como "~", "." ou com prefixo de til
+	if targetPath == "~" || targetPath == "." {
+		targetPath = ""
+	} else if strings.HasPrefix(targetPath, "~/") || strings.HasPrefix(targetPath, `~\`) {
+		targetPath = targetPath[2:]
+	}
+
+	// Sanitiza targetPath com filepath.Clean
+	cleanRel := filepath.Clean(filepath.FromSlash(targetPath))
+	if cleanRel == "." || cleanRel == "/" || cleanRel == `\` {
+		cleanRel = ""
+	}
+
+	resolved, err := filepath.Abs(filepath.Join(root, cleanRel))
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if resolved != root && !strings.HasPrefix(resolved, root+string(filepath.Separator)) {
-		return "", errors.New("access denied: path is outside workspace boundary")
+		return "", "", errors.New("access denied: path is outside workspace boundary")
 	}
-	return resolved, nil
+	return resolved, root, nil
 }
 
 func ListDirectory(targetPath, workspaceRoot string) (*DirectoryResult, error) {
-	safePath, err := resolveSafePath(targetPath, workspaceRoot)
+	safePath, rootAbs, err := resolveSafePath(targetPath, workspaceRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +157,6 @@ func ListDirectory(targetPath, workspaceRoot string) (*DirectoryResult, error) {
 		return nil, err
 	}
 
-	rootAbs, _ := filepath.Abs(workspaceRoot)
 	relPath, err := filepath.Rel(rootAbs, safePath)
 	if err != nil || relPath == "." {
 		relPath = ""
@@ -147,7 +200,7 @@ func ListDirectory(targetPath, workspaceRoot string) (*DirectoryResult, error) {
 }
 
 func ReadFileContent(targetPath, workspaceRoot string) (*FileContentResult, error) {
-	safePath, err := resolveSafePath(targetPath, workspaceRoot)
+	safePath, rootAbs, err := resolveSafePath(targetPath, workspaceRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +228,6 @@ func ReadFileContent(targetPath, workspaceRoot string) (*FileContentResult, erro
 		return nil, err
 	}
 
-	rootAbs, _ := filepath.Abs(workspaceRoot)
 	relPath, _ := filepath.Rel(rootAbs, safePath)
 
 	return &FileContentResult{
@@ -189,7 +241,7 @@ func ReadFileContent(targetPath, workspaceRoot string) (*FileContentResult, erro
 }
 
 func SaveFileContent(targetPath, content, workspaceRoot string) (*FileContentResult, error) {
-	safePath, err := resolveSafePath(targetPath, workspaceRoot)
+	safePath, rootAbs, err := resolveSafePath(targetPath, workspaceRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +264,6 @@ func SaveFileContent(targetPath, content, workspaceRoot string) (*FileContentRes
 		return nil, err
 	}
 
-	rootAbs, _ := filepath.Abs(workspaceRoot)
 	relPath, _ := filepath.Rel(rootAbs, safePath)
 
 	return &FileContentResult{

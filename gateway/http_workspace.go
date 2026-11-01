@@ -26,10 +26,13 @@ func handleWorkspaceTree(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ws := r.URL.Query().Get("workspace")
-	if ws == "" {
+	if ws == "" || ws == "~" || ws == "." {
 		ws = config.AppConfig.DefaultWorkspace
 	}
 	p := r.URL.Query().Get("path")
+	if p == "~" || p == "." {
+		p = ""
+	}
 
 	result, err := services.ListDirectory(p, ws)
 	if err != nil {
@@ -64,11 +67,11 @@ func handleWorkspaceFile(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
 		ws := r.URL.Query().Get("workspace")
-		if ws == "" {
+		if ws == "" || ws == "~" || ws == "." {
 			ws = config.AppConfig.DefaultWorkspace
 		}
 		p := r.URL.Query().Get("path")
-		if p == "" {
+		if p == "" || p == "~" || p == "." {
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": "Path is required"})
 			return
 		}
@@ -104,10 +107,10 @@ func handleWorkspaceFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ws := req.Workspace
-		if ws == "" {
+		if ws == "" || ws == "~" || ws == "." {
 			ws = config.AppConfig.DefaultWorkspace
 		}
-		if req.Path == "" {
+		if req.Path == "" || req.Path == "~" || req.Path == "." {
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": "Path is required"})
 			return
 		}

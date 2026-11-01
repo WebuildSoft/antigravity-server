@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
-  "build": 24,
-  "releasedAt": "2026-11-01T01:00:00Z",
-  "changelog": "Suporte a Windows, Linux e macOS com quick tunnel Cloudflare HTTP/2 e telemetria transparente",
-  "downloadUrl": "/baixar"
+  "build": 25,
+  "releasedAt": "2026-11-01T09:25:00Z",
+  "changelog": "Suporte a resolução universal de workspace com til (~) no Linux, macOS e Windows",
+  "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/AntigravityMobile-v1.4.0-build24.apk"
 }

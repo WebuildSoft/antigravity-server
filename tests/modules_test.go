@@ -376,3 +376,53 @@ func TestTelemetryDisabledOptOutConsent(t *testing.T) {
 
 	t.Logf("✓ Conformidade com LGPD/Opt-out validada: Nenhum dado transmitido quando TelemetryEnabled=false")
 }
+
+// Test 20: Expansão de Tilde Multiplataforma e Resolução de Workspace "~"
+func TestExpandHomeAndWorkspaceTildeResolution(t *testing.T) {
+	_, cleanup := setupTestEnvironment(t)
+	defer cleanup()
+
+	// 1. Validar ExpandHome em diferentes formatos
+	home, err := services.ExpandHome("~")
+	if err != nil || home == "" || home == "~" {
+		t.Fatalf("ExpandHome('~') falhou em expandir para diretório home: %v (%s)", err, home)
+	}
+
+	subHome, err := services.ExpandHome("~/meu_projeto")
+	if err != nil || !strings.HasSuffix(subHome, "meu_projeto") || strings.HasPrefix(subHome, "~") {
+		t.Fatalf("ExpandHome('~/meu_projeto') falhou: %v (%s)", err, subHome)
+	}
+
+	winSubHome, err := services.ExpandHome(`~\meu_projeto_win`)
+	if err != nil || !strings.HasSuffix(winSubHome, "meu_projeto_win") || strings.HasPrefix(winSubHome, "~") {
+		t.Fatalf("ExpandHome(`~\\meu_projeto_win`) falhou: %v (%s)", err, winSubHome)
+	}
+	t.Logf("✓ ExpandHome expandiu til com sucesso em todos os formatos multiplataforma")
+
+	// 2. Criar arquivo de teste no DefaultWorkspace
+	testFile := "workspace_test.txt"
+	_, err = services.SaveFileContent(testFile, "conteudo de teste", "~")
+	if err != nil {
+		t.Fatalf("SaveFileContent com workspace='~' falhou com erro: %v", err)
+	}
+
+	// 3. ListDirectory com workspace="~" e path="" (cenário exato que causava erro no mobile)
+	res, err := services.ListDirectory("", "~")
+	if err != nil {
+		t.Fatalf("ListDirectory com workspace='~' e path='' falhou (ERRO DO MOBILE REPRODUZIDO): %v", err)
+	}
+	if len(res.Items) == 0 {
+		t.Fatalf("ListDirectory retornou 0 itens, esperava encontrar %s", testFile)
+	}
+	t.Logf("✓ ListDirectory com workspace='~' resolveu para DefaultWorkspace e listou %d arquivo(s)", len(res.Items))
+
+	// 4. ReadFileContent com workspace="~"
+	contentRes, err := services.ReadFileContent(testFile, "~")
+	if err != nil {
+		t.Fatalf("ReadFileContent com workspace='~' falhou: %v", err)
+	}
+	if contentRes.Content != "conteudo de teste" {
+		t.Fatalf("Conteúdo lido incorreto: %s", contentRes.Content)
+	}
+	t.Logf("✓ ReadFileContent com workspace='~' leu o arquivo com sucesso!")
+}

@@ -161,13 +161,22 @@ func handleRootAndStatic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if strings.Contains(r.URL.RawPath, "..") || strings.Contains(r.RequestURI, "..") {
+		http.NotFound(w, r)
+		return
+	}
+
 	fi, err := os.Stat(fullPath)
 	if err != nil || fi.IsDir() {
-		fullPath = filepath.Join(webDirAbs, "index.html")
-		fi, err = os.Stat(fullPath)
-		if err != nil {
-			fmt.Printf("⚠️ [Web] Interface web não encontrada em %s. Exibindo página de download...\n", webDirAbs)
-			handleLandingPage(w, r)
+		indexFile := filepath.Join(webDirAbs, "index.html")
+		if _, errIndex := os.Stat(indexFile); errIndex == nil {
+			fullPath = indexFile
+		} else {
+			if p == "/index.html" || p == "/" {
+				handleLandingPage(w, r)
+			} else {
+				http.NotFound(w, r)
+			}
 			return
 		}
 	}

@@ -17,8 +17,13 @@ import (
 
 func validateCwd(targetCwd string) string {
 	defaultWs, _ := filepath.Abs(config.AppConfig.DefaultWorkspace)
-	if targetCwd == "" {
+	targetCwd = strings.TrimSpace(targetCwd)
+	if targetCwd == "" || targetCwd == "~" || targetCwd == "." {
 		return defaultWs
+	}
+	expanded, err := ExpandHome(targetCwd)
+	if err == nil && expanded != "" {
+		targetCwd = expanded
 	}
 	abs, err := filepath.Abs(targetCwd)
 	if err != nil {

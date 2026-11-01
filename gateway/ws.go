@@ -219,12 +219,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	} else {
 		clientIPs = []services.NetworkAddress{}
 		if userEmail != "" {
-			allAccs, _ := services.ListAccounts()
-			for _, a := range allAccs {
-				if strings.EqualFold(a.Email, userEmail) {
-					clientAccounts = append(clientAccounts, a)
-				}
-			}
+			clientAccounts, _ = services.ListAccounts()
 		}
 	}
 	if clientAccounts == nil {

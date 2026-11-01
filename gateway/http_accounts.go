@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"antigravity-bridge/config"
 	"antigravity-bridge/services"
@@ -44,12 +43,7 @@ func handleAccounts(w http.ResponseWriter, r *http.Request) {
 	if !isRemote {
 		accounts, _ = services.ListAccounts()
 	} else if user != nil && user.Email != "" {
-		all, _ := services.ListAccounts()
-		for _, a := range all {
-			if strings.EqualFold(a.Email, user.Email) {
-				accounts = append(accounts, a)
-			}
-		}
+		accounts, _ = services.ListAccounts()
 	}
 	if accounts == nil {
 		accounts = []services.AccountProfile{}

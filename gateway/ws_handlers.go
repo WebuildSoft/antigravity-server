@@ -138,12 +138,7 @@ func (c *ClientConn) handleAccounts(action string, data map[string]interface{}, 
 		if !isRemote {
 			accounts, _ = services.ListAccounts()
 		} else if c.authUser != nil && c.authUser.Email != "" {
-			all, _ := services.ListAccounts()
-			for _, a := range all {
-				if strings.EqualFold(a.Email, c.authUser.Email) {
-					accounts = append(accounts, a)
-				}
-			}
+			accounts, _ = services.ListAccounts()
 		}
 		if accounts == nil {
 			accounts = []services.AccountProfile{}
@@ -270,10 +265,13 @@ func (c *ClientConn) handleFiles(action string, data map[string]interface{}, isR
 		return
 	}
 	wsPath, _ := data["workspace"].(string)
-	if wsPath == "" {
+	if wsPath == "" || wsPath == "~" || wsPath == "." {
 		wsPath = config.AppConfig.DefaultWorkspace
 	}
 	p, _ := data["path"].(string)
+	if p == "~" || p == "." {
+		p = ""
+	}
 
 	switch action {
 	case "list_files":

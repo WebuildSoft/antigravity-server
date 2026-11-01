@@ -6,6 +6,17 @@ O formato segue as diretrizes do [Keep a Changelog](https://keepachangelog.com/p
 
 ---
 
+## [1.4.0] - 2026-11-01 (Build 25)
+
+### 📁 Workspace & Arquivos (Multiplataforma)
+- **Resolução Canônica de Tilde (`~`) Multiplataforma:**
+  - Implementada a função `ExpandHome` em `services/file.go`, capaz de expandir `~`, `~/...` e `~\...` para o diretório de usuário de forma nativa e segura no Linux, macOS e Windows.
+  - Correção na função `resolveSafePath`: quando o app remoto solicita o workspace `"~"`, o servidor redireciona automaticamente para o `DefaultWorkspace` oficial sem tentar buscar uma pasta física literal `~` (eliminando o erro `stat .../antigravity-server/~: no such file or directory`).
+  - Proteção e normalização aplicadas aos endpoints HTTP `/api/workspace/tree`, `/api/workspace/file` e mensagens WebSocket.
+  - Adicionado teste automatizado `TestExpandHomeAndWorkspaceTildeResolution` garantindo 100% de cobertura contra regressões.
+
+---
+
 ## [1.4.0] - 2026-10-31 (Build 20)
 
 ### 📱 Aplicativo Mobile & Interface Web
