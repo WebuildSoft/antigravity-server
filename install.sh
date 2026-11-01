@@ -44,6 +44,8 @@ if [ ! -f "$SCRIPT_DIR/go.mod" ] && [ ! -f "$SCRIPT_DIR/start.sh" ]; then
             curl -fsSL https://github.com/WebuildSoft/antigravity-server/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C "$INSTALL_TARGET"
         fi
     fi
+    # Limpar pastas vazias se foram criadas na raiz por engano anteriormente
+    rmdir "$SCRIPT_DIR/bin" "$SCRIPT_DIR/data" "$SCRIPT_DIR/uploads" 2>/dev/null || true
     cd "$INSTALL_TARGET"
     SCRIPT_DIR="$INSTALL_TARGET"
 else
@@ -199,5 +201,8 @@ fi
 echo -e "\n${BOLD}${GREEN}============================================================"
 echo "    🎉 INSTALAÇÃO CONCLUÍDA COM SUCESSO!                    "
 echo -e "============================================================${RESET}"
-echo -e "Para iniciar o servidor a qualquer momento, execute:"
-echo -e "  ${BOLD}${CYAN}cd \"$SCRIPT_DIR\" && ./start.sh${RESET}\n"
+echo -e "Para iniciar o servidor no futuro a qualquer momento, execute:"
+echo -e "  ${CYAN}cd \"$SCRIPT_DIR\" && ./start.sh${RESET}\n"
+echo -e "${BOLD}${GREEN}🚀 Iniciando o servidor automaticamente agora...${RESET}\n"
+
+exec "$SCRIPT_DIR/start.sh"
