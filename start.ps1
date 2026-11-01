@@ -1,6 +1,9 @@
 # ==============================================================================
 #  Antigravity Server - Inicializador para Windows com Tunel e QR Code
 # ==============================================================================
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
+try { [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor 3072 } catch {}
+
 $ErrorActionPreference = "Continue"
 
 $scriptDir = $PSScriptRoot
@@ -37,8 +40,14 @@ if ($env:PORT) {
 }
 
 function Test-PortInUse($p) {
-    $conn = Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue
-    return ($null -ne $conn)
+    try {
+        $listener = New-Object System.Net.Sockets.TcpListener ([System.Net.IPAddress]::Loopback, $p)
+        $listener.Start()
+        $listener.Stop()
+        return $false
+    } catch {
+        return $true
+    }
 }
 
 $originalPort = $port
@@ -82,7 +91,6 @@ function Cleanup {
 # ------------------------------------------------------------------------------
 $publicUrl = $null
 if (Test-Path $cfBin) {
-    Write-Host "Iniciando Quick Tunnel Cloudflare (Zero-Config)..." -ForegroundColor Cyan
     $tunnelLog = Join-Path $env:TEMP "cf_quick_tunnel_$port.log"
     if (Test-Path $tunnelLog) {
         Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue
@@ -91,7 +99,13 @@ if (Test-Path $cfBin) {
     try {
         $pinfo = New-Object System.Diagnostics.ProcessStartInfo
         $pinfo.FileName = $cfBin
-        $pinfo.Arguments = "tunnel --url http://127.0.0.1:$port --logfile `"$tunnelLog`""
+        if ($env:CLOUDFLARE_TUNNEL_TOKEN) {
+            Write-Host "Conectando via tunel Cloudflare configurado..." -ForegroundColor Cyan
+            $pinfo.Arguments = "tunnel --protocol http2 run --token `"$($env:CLOUDFLARE_TUNNEL_TOKEN)`""
+        } else {
+            Write-Host "Iniciando Quick Tunnel Cloudflare (Zero-Config)..." -ForegroundColor Cyan
+            $pinfo.Arguments = "tunnel --url http://127.0.0.1:$port --protocol http2 --logfile `"$tunnelLog`""
+        }
         $pinfo.UseShellExecute = $false
         $pinfo.CreateNoWindow = $true
         $cfProcess = [System.Diagnostics.Process]::Start($pinfo)
@@ -148,6 +162,8 @@ if (-not (Test-Path $serverExe)) {
         exit 1
     }
 }
+
+Unblock-File -Path $serverExe -ErrorAction SilentlyContinue
 
 try {
     # Executar o servidor no console em primeiro plano

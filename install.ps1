@@ -1,6 +1,9 @@
 # ==============================================================================
 #  Antigravity Server - Instalador Inteligente para Windows (PowerShell)
 # ==============================================================================
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
+try { [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor 3072 } catch {}
+
 $ErrorActionPreference = "Stop"
 
 Write-Host "============================================================" -ForegroundColor Cyan
@@ -125,11 +128,16 @@ if (-not (Test-Path $cfPath)) {
         } else {
             Invoke-WebRequest -Uri $cfUrl -OutFile $cfPath -UseBasicParsing
         }
+        Unblock-File -Path "$cfPath" -ErrorAction SilentlyContinue
         Write-Host "      [OK] cloudflared baixado com sucesso em bin\cloudflared.exe" -ForegroundColor Green
     }
 } else {
+    Unblock-File -Path "$cfPath" -ErrorAction SilentlyContinue
     Write-Host "      [OK] cloudflared local encontrado em: $cfPath" -ForegroundColor Green
 }
+
+# Finalizar instancia anterior do servidor se estiver em execucao para evitar arquivos bloqueados
+Get-Process antigravity-server -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 # ------------------------------------------------------------------------------
 # 4. Baixar / Atualizar Arquivos do Servidor (start.ps1, start.bat, executavel, web)
@@ -149,7 +157,7 @@ if (-not (Test-Path "$scriptDir\web\index.html")) {
     if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
         curl.exe -# -fSL "$pkgUrl" -o "$pkgZip"
     } else {
-        Invoke-WebRequest -Uri $pkgUrl -OutFile $pkgZip
+        Invoke-WebRequest -Uri $pkgUrl -OutFile $pkgZip -UseBasicParsing
     }
     Expand-Archive -Path $pkgZip -DestinationPath $scriptDir -Force
     Remove-Item -Path $pkgZip -Force -ErrorAction SilentlyContinue
@@ -158,8 +166,15 @@ if (-not (Test-Path "$scriptDir\web\index.html")) {
     Write-Host "      [OK] Interface web pronta em web/" -ForegroundColor Green
 }
 
-Invoke-WebRequest -Uri $startPs1Url -OutFile "$scriptDir\start.ps1" -UseBasicParsing
-Invoke-WebRequest -Uri $startBatUrl -OutFile "$scriptDir\start.bat" -UseBasicParsing
+if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+    curl.exe -# -fSL "$startPs1Url" -o "$scriptDir\start.ps1"
+    curl.exe -# -fSL "$startBatUrl" -o "$scriptDir\start.bat"
+} else {
+    Invoke-WebRequest -Uri $startPs1Url -OutFile "$scriptDir\start.ps1" -UseBasicParsing
+    Invoke-WebRequest -Uri $startBatUrl -OutFile "$scriptDir\start.bat" -UseBasicParsing
+}
+Unblock-File -Path "$scriptDir\start.ps1" -ErrorAction SilentlyContinue
+Unblock-File -Path "$scriptDir\start.bat" -ErrorAction SilentlyContinue
 
 if (-not (Test-Path "$scriptDir\.env")) {
     if (Test-Path "$scriptDir\.env.example") {
@@ -184,15 +199,17 @@ if (Test-Path $prebuilt) {
         Invoke-WebRequest -Uri $repoExeUrl -OutFile $serverExe -UseBasicParsing
     }
 }
+Unblock-File -Path "$serverExe" -ErrorAction SilentlyContinue
 Write-Host "      [OK] Executavel antigravity-server.exe pronto" -ForegroundColor Green
 
 Write-Host "`n============================================================" -ForegroundColor Green
 Write-Host "    INSTALACAO NO WINDOWS CONCLUIDA COM SUCESSO!            " -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host "Para iniciar o servidor no futuro a qualquer momento, execute:"
-Write-Host "  cd `"$scriptDir`"; .\start.ps1" -ForegroundColor Cyan
+Write-Host "  cd `"$scriptDir`"; powershell -ExecutionPolicy Bypass -File .\start.ps1" -ForegroundColor Cyan
 Write-Host "  (ou de dois cliques em start.bat)`n" -ForegroundColor Cyan
 Write-Host "Iniciando o servidor automaticamente agora...`n" -ForegroundColor Green
 
 # Iniciar o servidor
-& "$scriptDir\start.ps1"
+$psHost = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { "pwsh.exe" } else { "powershell.exe" }
+& $psHost -NoProfile -ExecutionPolicy Bypass -File "$scriptDir\start.ps1"
