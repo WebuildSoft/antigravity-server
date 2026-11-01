@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
-  "build": 25,
-  "releasedAt": "2026-11-01T09:25:00Z",
-  "changelog": "Rolagem inteligente no chat, botão de rolagem rápida, redução de flicker e suporte universal a til (~)",
+  "build": 26,
+  "releasedAt": "2026-11-01T23:45:00Z",
+  "changelog": "Correção de mensagens duplicadas no chat, debounce no envio e atualização direta via GitHub Releases",
   "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
 }
