@@ -89,7 +89,13 @@ func handleAPKDownload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if apkPath == "" {
-		http.Error(w, "APK ainda não encontrado.", http.StatusNotFound)
+		build := vInfo.Build
+		if build == 0 {
+			build = 24
+		}
+		releaseURL := fmt.Sprintf("https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v%s/AntigravityMobile-v%s-build%d.apk", ver, ver, build)
+		fmt.Printf("📦 [Download APK] Redirecionando para GitHub Release: %s\n", releaseURL)
+		http.Redirect(w, r, releaseURL, http.StatusFound)
 		return
 	}
 
