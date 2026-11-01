@@ -39,6 +39,11 @@ if ($env:PORT) {
     $port = [int]$env:PORT
 }
 
+# Finalizar instancias anteriores do servidor ou tunel que possam ter ficado em segundo plano
+Get-Process antigravity-server -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-CimInstance Win32_Process -Filter "Name = 'cloudflared.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*$port*" -or $_.ExecutablePath -like "*$scriptDir*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+Start-Sleep -Milliseconds 400
+
 function Test-PortInUse($p) {
     try {
         $listener = New-Object System.Net.Sockets.TcpListener ([System.Net.IPAddress]::Loopback, $p)
