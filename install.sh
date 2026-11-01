@@ -17,8 +17,30 @@ echo "    🚀 INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE           "
 echo "============================================================"
 echo -e "${RESET}"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+# Detectar se estamos dentro do repositório clonado ou se foi executado via curl | bash
+if [ -n "${BASH_SOURCE[0]}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+    SCRIPT_DIR="$PWD"
+fi
+
+# Se não estiver dentro do repositório (ex: executado via curl ... | bash)
+if [ ! -f "$SCRIPT_DIR/go.mod" ] && [ ! -f "$SCRIPT_DIR/start.sh" ]; then
+    INSTALL_TARGET="$SCRIPT_DIR/antigravity-server"
+    echo -e "${CYAN}📦 Repositório não detectado na pasta atual.${RESET}"
+    echo -e "${CYAN}⬇ Baixando repositório oficial em: ${INSTALL_TARGET}...${RESET}"
+    if command -v git >/dev/null 2>&1; then
+        git clone https://github.com/WebuildSoft/antigravity-server.git "$INSTALL_TARGET"
+    else
+        echo -e "${YELLOW}Git não encontrado. Baixando arquivos via tarball...${RESET}"
+        mkdir -p "$INSTALL_TARGET"
+        curl -fsSL https://github.com/WebuildSoft/antigravity-server/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C "$INSTALL_TARGET"
+    fi
+    cd "$INSTALL_TARGET"
+    SCRIPT_DIR="$INSTALL_TARGET"
+else
+    cd "$SCRIPT_DIR"
+fi
 
 mkdir -p bin data uploads
 
@@ -92,15 +114,20 @@ if [ "$AUTH_OK" = true ]; then
     echo -e "      ${GREEN}✓ agy autenticado e pronto para responder a comandos.${RESET}"
 else
     echo -e "      ${YELLOW}! Nenhuma conta Google conectada ao agy.${RESET}"
-    echo -e "      ${CYAN}🔑 Vamos iniciar a autenticação interativa agora...${RESET}"
-    echo -e "      Uma janela ou link será exibido abaixo para você autorizar no navegador."
-    echo ""
-    "$AGY_PATH" || true
-    echo ""
-    if "$AGY_PATH" models >/dev/null 2>&1; then
-        echo -e "      ${GREEN}✓ Login realizado com sucesso!${RESET}"
+    if [ -t 0 ]; then
+        echo -e "      ${CYAN}🔑 Vamos iniciar a autenticação interativa agora...${RESET}"
+        echo -e "      Uma janela ou link será exibido abaixo para você autorizar no navegador."
+        echo ""
+        "$AGY_PATH" || true
+        echo ""
+        if "$AGY_PATH" models >/dev/null 2>&1; then
+            echo -e "      ${GREEN}✓ Login realizado com sucesso!${RESET}"
+        else
+            echo -e "      ${YELLOW}⚠️ O login não foi concluído. Você poderá autenticar depois executando 'agy' no terminal.${RESET}"
+        fi
     else
-        echo -e "      ${YELLOW}⚠️ O login não foi concluído. Você poderá autenticar depois executando 'agy' no terminal.${RESET}"
+        echo -e "      ${YELLOW}⚠️ Como o instalador foi chamado de forma não-interativa (pipe), faça login após a instalação digitando:${RESET}"
+        echo -e "         ${BOLD}agy${RESET}"
     fi
 fi
 
@@ -150,7 +177,7 @@ if [ ! -f "$SCRIPT_DIR/antigravity-server" ]; then
         echo -e "      ${GREEN}✓ Utilizando binário pré-compilado para ${OS}-${GO_ARCH}${RESET}"
         cp "$PREBUILT" "$SCRIPT_DIR/antigravity-server"
         chmod +x "$SCRIPT_DIR/antigravity-server"
-    elif which go >/dev/null 2>&1; then
+    elif [ -f "$SCRIPT_DIR/go.mod" ] && command -v go >/dev/null 2>&1; then
         echo -e "      ${CYAN}Compilando antigravity-server via Go...${RESET}"
         go build -ldflags="-s -w" -o "$SCRIPT_DIR/antigravity-server" .
     fi
@@ -165,4 +192,4 @@ echo -e "\n${BOLD}${GREEN}======================================================
 echo "    🎉 INSTALAÇÃO CONCLUÍDA COM SUCESSO!                    "
 echo -e "============================================================${RESET}"
 echo -e "Para iniciar o servidor a qualquer momento, execute:"
-echo -e "  ${BOLD}${CYAN}./start.sh${RESET}\n"
+echo -e "  ${BOLD}${CYAN}cd \"$SCRIPT_DIR\" && ./start.sh${RESET}\n"
