@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
-  "build": 44,
-  "releasedAt": "2026-11-02T15:38:48Z",
-  "changelog": "Isolamento multi-servidor: limpeza e recarregamento automático das conversas ao alternar entre Windows, Linux e Mac",
+  "build": 45,
+  "releasedAt": "2026-11-02T20:24:53Z",
+  "changelog": "Sincronização nativa do OS Keyring (macOS Keychain, Windows Credential Manager, Linux) para alternância real de contas no Agy e melhoria no parser de cotas",
   "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
 }
