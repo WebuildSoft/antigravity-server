@@ -6,6 +6,13 @@ try { [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityP
 
 $ErrorActionPreference = "Stop"
 
+function Print-Bullet($label, $value, $color = "Green") {
+    Write-Host "  " -NoNewline
+    Write-Host "● " -ForegroundColor $color -NoNewline
+    Write-Host ("{0,-16}" -f $label) -NoNewline
+    Write-Host $value
+}
+
 Write-Host ""
 Write-Host "╭─────────────────────────────────────────────────────────────╮" -ForegroundColor Cyan
 Write-Host "│  ANTIGRAVITY SERVER • INSTALADOR (WINDOWS)                  │" -ForegroundColor Cyan
@@ -27,10 +34,12 @@ Set-Location $scriptDir
 # Criar pastas locais
 New-Item -ItemType Directory -Force -Path "$scriptDir\bin", "$scriptDir\data", "$scriptDir\uploads" | Out-Null
 
+$arch = if ([System.Environment]::Is64BitOperatingSystem) { "x86_64" } else { "x86" }
+Print-Bullet "Sistema:" "Windows ($arch)" "Green"
+
 # ------------------------------------------------------------------------------
 # 2. Verificar ou Instalar Antigravity CLI ('agy')
 # ------------------------------------------------------------------------------
-Write-Host "`n[1/4] Verificando Antigravity CLI ('agy')..." -ForegroundColor Cyan
 $agyPath = $null
 if (Get-Command agy.exe -ErrorAction SilentlyContinue) {
     $agyPath = (Get-Command agy.exe).Source
@@ -57,8 +66,6 @@ if (Get-Command agy.exe -ErrorAction SilentlyContinue) {
 }
 
 if (-not $agyPath) {
-    Write-Host "      [!] Antigravity CLI ('agy') nao encontrado no sistema." -ForegroundColor Yellow
-    Write-Host "      Baixando e instalando o Antigravity CLI ('agy') automaticamente..." -ForegroundColor Cyan
     try {
         $installerScript = Invoke-RestMethod -Uri "https://antigravity.google/cli/install.ps1"
         Invoke-Expression $installerScript 2>$null
@@ -69,20 +76,19 @@ if (-not $agyPath) {
             if ($env:PATH -notlike "*$agyDir*") {
                 $env:PATH = "$agyDir;$env:PATH"
             }
-            Write-Host "      [OK] agy instalado com sucesso em: $agyPath" -ForegroundColor Green
         }
-    } catch {
-        Write-Host "      [!] Tentativa de auto-instalacao do agy: $_" -ForegroundColor Yellow
-    }
+    } catch {}
 }
 
 if ($agyPath) {
-    Write-Host "      [OK] agy encontrado: $agyPath" -ForegroundColor Green
+    $agyVer = "instalado"
+    try {
+        $vOutput = & $agyPath --version 2>$null
+        if ($vOutput) { $agyVer = $vOutput.Trim() }
+    } catch {}
+    Print-Bullet "CLI Agente:" "Conectado ($agyVer)" "Green"
 
-    # --------------------------------------------------------------------------
     # Verificar Autenticacao Google no 'agy'
-    # --------------------------------------------------------------------------
-    Write-Host "`nVerificando autenticacao Google no Antigravity..." -ForegroundColor Cyan
     $authOk = $false
     try {
         $modelsLog = Join-Path $env:TEMP "agy_models.txt"
@@ -93,66 +99,48 @@ if ($agyPath) {
     } catch {}
 
     if ($authOk) {
-        Write-Host "      [OK] Conta Google conectada e pronta para responder." -ForegroundColor Green
+        Print-Bullet "Autenticação:" "Conta Google vinculada" "Green"
     } else {
-        Write-Host "      [!] Nenhuma conta Google conectada ao Antigravity ainda." -ForegroundColor Yellow
-        Write-Host "      Abrindo login Google no seu navegador..." -ForegroundColor Cyan
-        try {
-            Start-Process -FilePath $agyPath -Wait
-            try {
-                $p2 = Start-Process -FilePath $agyPath -ArgumentList "models" -NoNewWindow -Wait -PassThru -ErrorAction SilentlyContinue
-                if ($p2.ExitCode -eq 0) {
-                    Write-Host "      [OK] Login realizado com sucesso!" -ForegroundColor Green
-                }
-            } catch {}
-        } catch {
-            Write-Host "      [!] Autenticacao interativa ignorada: $_" -ForegroundColor Yellow
-        }
+        Print-Bullet "Autenticação:" "Pendente (conecte via 'agy')" "Yellow"
     }
 } else {
-    Write-Host "      [!] Antigravity CLI ('agy') nao detectado." -ForegroundColor Yellow
+    Print-Bullet "CLI Agente:" "Não detectado" "Yellow"
 }
 
 # ------------------------------------------------------------------------------
 # 3. Baixar ou Verificar Cloudflare Tunnel (cloudflared.exe)
 # ------------------------------------------------------------------------------
-Write-Host "`n[2/4] Verificando Cloudflare Tunnel (cloudflared)..." -ForegroundColor Cyan
 $cfPath = "$scriptDir\bin\cloudflared.exe"
 if (-not (Test-Path $cfPath)) {
     if (Get-Command cloudflared.exe -ErrorAction SilentlyContinue) {
         $sysCf = (Get-Command cloudflared.exe).Source
-        Write-Host "      [OK] cloudflared do sistema encontrado: $sysCf" -ForegroundColor Green
         Copy-Item $sysCf $cfPath -Force
+        Print-Bullet "Túnel Seguro:" "Cloudflare Zero Trust pronto" "Green"
     } else {
-        Write-Host "      [!] Baixando binario oficial seguro do Cloudflare Tunnel..." -ForegroundColor Yellow
         $cfUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
         if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-            curl.exe -# -fSL "$cfUrl" -o "$cfPath"
+            curl.exe -fsSL "$cfUrl" -o "$cfPath" 2>$null
         } else {
             Invoke-WebRequest -Uri $cfUrl -OutFile $cfPath -UseBasicParsing
         }
         Unblock-File -Path "$cfPath" -ErrorAction SilentlyContinue
-        Write-Host "      [OK] cloudflared baixado com sucesso em bin\cloudflared.exe" -ForegroundColor Green
+        Print-Bullet "Túnel Seguro:" "Cloudflare Zero Trust configurado" "Green"
     }
 } else {
     Unblock-File -Path "$cfPath" -ErrorAction SilentlyContinue
-    Write-Host "      [OK] cloudflared local encontrado em: $cfPath" -ForegroundColor Green
+    Print-Bullet "Túnel Seguro:" "Cloudflare Zero Trust pronto" "Green"
 }
 
-# Finalizar instancia anterior do servidor se estiver em execucao para evitar arquivos bloqueados
+# Finalizar instancia anterior do servidor se estiver em execucao
 Get-Process antigravity-server -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 # ------------------------------------------------------------------------------
 # 4. Baixar / Atualizar Arquivos do Servidor (start.ps1, start.bat, executavel, web)
 # ------------------------------------------------------------------------------
-Write-Host "`n[3/4] Configurando arquivos e executavel do servidor..." -ForegroundColor Cyan
-
-# Baixar start.ps1 e start.bat atualizados diretamente do repositorio oficial
 $startPs1Url = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.ps1"
 $startBatUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.bat"
 $envExUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/.env.example"
 
-# Se existir um subdiretorio 'antigravity-server' remanescente de descompactacao anterior, corrigir
 if (Test-Path "$scriptDir\antigravity-server" -PathType Container) {
     if (Test-Path "$scriptDir\antigravity-server\web" -and -not (Test-Path "$scriptDir\web")) {
         Copy-Item -Path "$scriptDir\antigravity-server\web" -Destination $scriptDir -Recurse -Force
@@ -162,13 +150,12 @@ if (Test-Path "$scriptDir\antigravity-server" -PathType Container) {
 
 # Baixar pacote da interface web se nao existir
 if (-not (Test-Path "$scriptDir\web\index.html")) {
-    Write-Host "      Baixando interface web do Antigravity (Flutter Web)..." -ForegroundColor Cyan
     $pkgUrl = "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-windows.zip"
     $pkgZip = Join-Path $env:TEMP "antigravity-server-windows.zip"
     $pkgExtract = Join-Path $env:TEMP "antigravity_pkg_extract"
     if (Test-Path $pkgExtract) { Remove-Item -Path $pkgExtract -Recurse -Force -ErrorAction SilentlyContinue }
     if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-        curl.exe -fsSL "$pkgUrl" -o "$pkgZip"
+        curl.exe -fsSL "$pkgUrl" -o "$pkgZip" 2>$null
     } else {
         Invoke-WebRequest -Uri $pkgUrl -OutFile $pkgZip -UseBasicParsing
     }
@@ -179,14 +166,12 @@ if (-not (Test-Path "$scriptDir\web\index.html")) {
         Copy-Item -Path "$pkgExtract\web" -Destination $scriptDir -Recurse -Force
     }
     Remove-Item -Path $pkgZip, $pkgExtract -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Host "      [OK] Interface web pronta em web/" -ForegroundColor Green
-} else {
-    Write-Host "      [OK] Interface web pronta em web/" -ForegroundColor Green
 }
+Print-Bullet "Interface Web:" "Flutter Web client pronto" "Green"
 
 if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-    curl.exe -fsSL "$startPs1Url" -o "$scriptDir\start.ps1"
-    curl.exe -fsSL "$startBatUrl" -o "$scriptDir\start.bat"
+    curl.exe -fsSL "$startPs1Url" -o "$scriptDir\start.ps1" 2>$null
+    curl.exe -fsSL "$startBatUrl" -o "$scriptDir\start.bat" 2>$null
 } else {
     Invoke-WebRequest -Uri $startPs1Url -OutFile "$scriptDir\start.ps1" -UseBasicParsing
     Invoke-WebRequest -Uri $startBatUrl -OutFile "$scriptDir\start.bat" -UseBasicParsing
@@ -200,29 +185,28 @@ if (-not (Test-Path "$scriptDir\.env")) {
     } else {
         Invoke-WebRequest -Uri $envExUrl -OutFile "$scriptDir\.env" -UseBasicParsing
     }
-    Write-Host "      [OK] Arquivo .env configurado com sucesso" -ForegroundColor Green
 }
 
 $serverExe = "$scriptDir\antigravity-server.exe"
 $repoExeUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-windows-amd64.exe"
 $prebuilt = "$scriptDir\bin\antigravity-server-windows-amd64.exe"
 
-Write-Host "      Baixando/Atualizando executavel oficial do servidor..." -ForegroundColor Cyan
 if ((Test-Path $prebuilt) -and (Test-Path "$scriptDir\main.go")) {
     try { Copy-Item $prebuilt $serverExe -Force -ErrorAction SilentlyContinue } catch {}
 } else {
     $repoExeUrlCacheBust = "$repoExeUrl?v=" + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-        curl.exe -fsSL "$repoExeUrlCacheBust" -o "$serverExe"
+        curl.exe -fsSL "$repoExeUrlCacheBust" -o "$serverExe" 2>$null
     } else {
         Invoke-WebRequest -Uri $repoExeUrlCacheBust -OutFile $serverExe -UseBasicParsing
     }
 }
 Unblock-File -Path "$serverExe" -ErrorAction SilentlyContinue
-Write-Host "      [OK] Executavel antigravity-server.exe atualizado com sucesso" -ForegroundColor Green
+Print-Bullet "Executável:" "Servidor nativo atualizado" "Green"
 
 Write-Host ""
-Write-Host "Iniciando o servidor automaticamente agora...`n" -ForegroundColor Green
+Write-Host "  Iniciando servidor nativo..." -ForegroundColor DarkGray
+Write-Host ""
 
 # Iniciar o servidor
 $psHost = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { "pwsh.exe" } else { "powershell.exe" }
