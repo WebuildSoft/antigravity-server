@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
   "build": 41,
-  "releasedAt": "2026-11-02T14:16:46Z",
-  "changelog": "Lançamento oficial da Build 41: Reconhecimento contínuo de voz com ondas sonoras dinâmicas, editor de código com visualizador de diffs e realce de sintaxe colorido, gerenciamento de múltiplas contas Google simultâneas com cotas em tempo real, telemetria edge no Cloudflare Workers e novos instaladores minimalistas e resilientes.",
+  "releasedAt": "2026-11-02T14:30:50Z",
+  "changelog": "Lançamento oficial da Build 41: Suporte nativo a cores ANSI no console Windows, sincronização resiliente de executável e versão, reconhecimento contínuo de voz com ondas sonoras dinâmicas, editor de código com visualizador de diffs e realce de sintaxe colorido, suporte a múltiplas contas Google simultâneas com cotas em tempo real e telemetria edge no Cloudflare Workers.",
   "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
 }
