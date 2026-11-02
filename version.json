@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
   "build": 40,
-  "releasedAt": "2026-11-02T11:00:00Z",
-  "changelog": "Multi-contas profissional: suporte completo a 3+ contas Google, limites e cotas atualizados instantaneamente ao trocar, e login assistido multiplataforma (Mac, Windows, Linux) com fallback móvel.",
-  "downloadUrl": "https://gravity.lnki.pro/app.apk"
+  "releasedAt": "2026-11-02T13:34:20Z",
+  "changelog": "Ativar telemetria anônima padrão de mercado com opt-out e Safe-Download nativo",
+  "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
 }
