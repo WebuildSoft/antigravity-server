@@ -3,6 +3,11 @@
 # ==============================================================================
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
 try { [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor 3072 } catch {}
+try {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
+    $OutputEncoding           = [System.Text.Encoding]::UTF8
+} catch {}
 
 $ErrorActionPreference = "Stop"
 
@@ -200,6 +205,13 @@ if (-not (Test-Path "$scriptDir\.env")) {
         Safe-Download $envExUrl "$scriptDir\.env" $false
     }
 }
+
+$versionUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/version.json"
+Safe-Download $versionUrl "$scriptDir\version.json" $true
+
+# Parar processos antigos para liberar o executavel para atualizacao
+Get-Process antigravity-server -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 300
 
 $serverExe = "$scriptDir\antigravity-server.exe"
 $repoExeUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-windows-amd64.exe"

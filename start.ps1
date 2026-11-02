@@ -3,6 +3,11 @@
 # ==============================================================================
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
 try { [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor 3072 } catch {}
+try {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
+    $OutputEncoding           = [System.Text.Encoding]::UTF8
+} catch {}
 
 $ErrorActionPreference = "Continue"
 
@@ -167,16 +172,22 @@ if (Test-Path "$scriptDir\antigravity-server" -PathType Container) {
 }
 
 $serverExe = "$scriptDir\antigravity-server.exe"
-if (-not (Test-Path $serverExe)) {
-    $prebuilt = "$scriptDir\bin\antigravity-server-windows-amd64.exe"
-    if (Test-Path $prebuilt) {
-        Copy-Item $prebuilt $serverExe -Force
-    } else {
-        Write-Host "[X] Executavel antigravity-server.exe nao encontrado." -ForegroundColor Red
-        Write-Host "Por favor execute .\install.ps1 primeiro." -ForegroundColor Yellow
-        Cleanup
-        exit 1
+$prebuilt = "$scriptDir\bin\antigravity-server-windows-amd64.exe"
+
+# Sincronizar executavel com a compilacao mais recente em bin/
+if (Test-Path $prebuilt) {
+    if (-not (Test-Path $serverExe) -or ((Get-Item $prebuilt).LastWriteTime -gt (Get-Item $serverExe).LastWriteTime)) {
+        Copy-Item $prebuilt $serverExe -Force -ErrorAction SilentlyContinue
     }
+} elseif (-not (Test-Path $serverExe) -and (Test-Path "$scriptDir\antigravity-bridge.exe")) {
+    Copy-Item "$scriptDir\antigravity-bridge.exe" $serverExe -Force -ErrorAction SilentlyContinue
+}
+
+if (-not (Test-Path $serverExe)) {
+    Write-Host "[X] Executavel antigravity-server.exe nao encontrado." -ForegroundColor Red
+    Write-Host "Por favor execute .\install.ps1 primeiro." -ForegroundColor Yellow
+    Cleanup
+    exit 1
 }
 
 Unblock-File -Path $serverExe -ErrorAction SilentlyContinue

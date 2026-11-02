@@ -196,7 +196,7 @@ func main() {
 	}
 	build := vInfo.Build
 	if build == 0 {
-		build = 25
+		build = 41
 	}
 
 	cleanPublicURL := strings.TrimSpace(config.AppConfig.PublicURL)

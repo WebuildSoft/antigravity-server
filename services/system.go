@@ -79,7 +79,7 @@ func LoadVersionData() VersionData {
 	}
 	return VersionData{
 		Version:    "1.4.0",
-		Build:      24,
+		Build:      41,
 		ReleasedAt: time.Now().UTC().Format(time.RFC3339),
 	}
 }
