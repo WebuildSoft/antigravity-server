@@ -38,9 +38,9 @@ func FormatToolSummary(name string, args map[string]interface{}) string {
 	filePath := ""
 	if args != nil {
 		if p, ok := args["Path"].(string); ok {
-			filePath = p
+			filePath = strings.Trim(strings.TrimSpace(p), " \t\r\n\"'`")
 		} else if p, ok := args["path"].(string); ok {
-			filePath = p
+			filePath = strings.Trim(strings.TrimSpace(p), " \t\r\n\"'`")
 		}
 	}
 

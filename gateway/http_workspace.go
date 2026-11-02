@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"antigravity-bridge/config"
@@ -75,8 +76,10 @@ func handleWorkspaceFile(w http.ResponseWriter, r *http.Request) {
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": "Path is required"})
 			return
 		}
+		log.Printf("[WorkspaceFile] GET request for path=%q workspace=%q", p, ws)
 		result, err := services.ReadFileContent(p, ws)
 		if err != nil {
+			log.Printf("[WorkspaceFile] Error reading path=%q workspace=%q: %v", p, ws, err)
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
 				"success": false,
 				"error":   err.Error(),

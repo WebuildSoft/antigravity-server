@@ -17,18 +17,94 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
+const (
+	colorReset  = "\033[0m"
+	colorBold   = "\033[1m"
+	colorDim    = "\033[2m"
+	colorCyan   = "\033[36m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	colorBlue   = "\033[34m"
+	colorPurple = "\033[35m"
+	colorGray   = "\033[90m"
+	colorWhite  = "\033[97m"
+)
+
+func boxPad(text string, width int) string {
+	runes := []rune(text)
+	if len(runes) > width {
+		return string(runes[:width-3]) + "..."
+	}
+	return text + strings.Repeat(" ", width-len(runes))
+}
+
 func printQRCode(targetURL string) {
 	qr, err := qrcode.New(targetURL, qrcode.Medium)
 	if err != nil {
 		return
 	}
-	fmt.Println("\n============================================================")
-	fmt.Printf("  📱 CONEXÃO RÁPIDA - ANTIGRAVITY MOBILE\n")
-	fmt.Printf("  Link: %s\n", targetURL)
-	fmt.Println("  (Abra o app no celular e escaneie o código abaixo)")
-	fmt.Println("============================================================")
+	fmt.Println()
+	fmt.Printf("  %s╭─────────────────────────────────────────────────────────────╮%s\n", colorPurple, colorReset)
+	fmt.Printf("  %s│%s  %s  %s│%s\n", colorPurple, colorReset, boxPad("PAREAMENTO RÁPIDO COM O ANTIGRAVITY MOBILE", 57), colorPurple, colorReset)
+	fmt.Printf("  %s│%s  %s  %s│%s\n", colorPurple, colorReset, boxPad("Aponte a câmera do aplicativo para o código abaixo:", 57), colorPurple, colorReset)
+	linkText := "Link: " + targetURL
+	fmt.Printf("  %s│%s  %s%s%s  %s│%s\n", colorPurple, colorReset, colorCyan, boxPad(linkText, 57), colorReset, colorPurple, colorReset)
+	fmt.Printf("  %s╰─────────────────────────────────────────────────────────────╯%s\n", colorPurple, colorReset)
+	fmt.Println()
 	fmt.Print(qr.ToSmallString(false))
-	fmt.Print("============================================================\n\n")
+	fmt.Printf("  %s[INFO]%s %s Aguardando conexões do aplicativo móvel...\n\n", colorGreen, colorReset, time.Now().Format("15:04:05"))
+}
+
+func printServerDashboard(port string, ips []services.NetworkAddress, publicURL string, ver string, build int) {
+	fmt.Println()
+	title := fmt.Sprintf("ANTIGRAVITY COMPANION SERVER • v%s (Build #%d)", ver, build)
+	sub := "WebuildSoft Engine • Alta Performance & Latência Zero"
+
+	fmt.Printf("%s╭─────────────────────────────────────────────────────────────╮%s\n", colorCyan, colorReset)
+	fmt.Printf("%s│%s  %s  %s│%s\n", colorCyan, colorReset, boxPad(title, 57), colorCyan, colorReset)
+	fmt.Printf("%s│%s  %s  %s│%s\n", colorCyan, colorReset, colorDim+boxPad(sub, 57)+colorReset, colorCyan, colorReset)
+	fmt.Printf("%s╰─────────────────────────────────────────────────────────────╯%s\n", colorCyan, colorReset)
+
+	fmt.Println()
+	fmt.Printf("  %s●%s %sSistema:%s    %s (%s/%s)\n", colorGreen, colorReset, colorBold, colorReset, runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	fmt.Printf("  %s●%s %sPorta:%s      %s (TCP)\n", colorGreen, colorReset, colorBold, colorReset, port)
+	fmt.Printf("  %s●%s %sWorkspace:%s  %s\n", colorGreen, colorReset, colorBold, colorReset, config.AppConfig.DefaultWorkspace)
+
+	// Status do CLI agy
+	agyStatus := fmt.Sprintf("%sConectado (%s)%s", colorGreen, config.AppConfig.AgyBin, colorReset)
+	if config.AppConfig.AgyBin == "" || config.AppConfig.AgyBin == "agy" {
+		agyStatus = fmt.Sprintf("%sDetectando no PATH%s", colorYellow, colorReset)
+	}
+	fmt.Printf("  %s●%s %sCLI Agente:%s %s\n", colorGreen, colorReset, colorBold, colorReset, agyStatus)
+
+	// Status de Telemetria
+	if config.AppConfig.TelemetryEnabled && config.AppConfig.ErrorWebhookURL != "" {
+		fmt.Printf("  %s●%s %sTelemetria:%s %sAtiva (Monitor de Erros Anônimo)%s\n", colorBlue, colorReset, colorBold, colorReset, colorGreen, colorReset)
+	} else if config.AppConfig.TelemetryEnabled {
+		fmt.Printf("  %s●%s %sTelemetria:%s %sAtiva (Aguardando Webhook URL)%s\n", colorYellow, colorReset, colorBold, colorReset, colorYellow, colorReset)
+	} else {
+		fmt.Printf("  %s●%s %sTelemetria:%s %sDesativada (Privacidade Total)%s\n", colorGray, colorReset, colorBold, colorReset, colorGray, colorReset)
+	}
+
+	fmt.Println()
+	fmt.Printf("  %s%sENDPOINTS DE CONEXÃO:%s\n", colorBold, colorCyan, colorReset)
+	fmt.Printf("    Local:   %shttp://localhost:%s%s\n", colorWhite, port, colorReset)
+	for _, ip := range ips {
+		fmt.Printf("    Rede:    %shttp://%s:%s%s %s(ws://%s:%s/ws)%s\n",
+			colorWhite, ip.Address, port, colorReset, colorGray, ip.Address, port, colorReset)
+	}
+	if publicURL != "" {
+		fmt.Printf("    Túnel:   %s%s%s %s(TLS Criptografado)%s\n",
+			colorGreen, publicURL, colorReset, colorDim, colorReset)
+	}
+
+	targetURL := publicURL
+	if targetURL == "" && len(ips) > 0 {
+		targetURL = fmt.Sprintf("http://%s:%s", ips[0].Address, port)
+	} else if targetURL == "" {
+		targetURL = fmt.Sprintf("http://localhost:%s", port)
+	}
+	printQRCode(targetURL)
 }
 
 func main() {
@@ -63,7 +139,8 @@ func main() {
 			} else if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 				clientIP = strings.Split(xff, ",")[0]
 			}
-			fmt.Printf("🌐 [HTTP] %s %s from %s\n", r.Method, r.URL.Path, clientIP)
+			fmt.Printf("  %s[HTTP]%s %s %-6s %s%s%s %s(%s)%s\n",
+				colorGreen, colorReset, time.Now().Format("15:04:05"), r.Method, colorCyan, r.URL.Path, colorReset, colorGray, clientIP, colorReset)
 		}
 		if (r.URL.Path == "/" || r.URL.Path == "/ws") && websocket.IsWebSocketUpgrade(r) {
 			gateway.HandleWebSocket(w, r)
@@ -112,36 +189,15 @@ func main() {
 	}
 	build := vInfo.Build
 	if build == 0 {
-		build = 24
+		build = 25
 	}
 
-	fmt.Println("\n============================================================")
-	fmt.Printf("🚀 Antigravity Mobile Server v%s (Build #%d)\n", ver, build)
-	fmt.Printf("   Porta: %s | SO: %s/%s | Backend: Go Engine v2.0\n", port, runtime.GOOS, runtime.GOARCH)
-	fmt.Println("============================================================")
-	fmt.Printf("Endpoints Locais:\n")
-	fmt.Printf("  - Local:   http://localhost:%s\n", port)
-	for _, ip := range ips {
-		fmt.Printf("  - Rede:    http://%s:%s (ws://%s:%s/ws)\n", ip.Address, port, ip.Address, port)
-	}
-
-	// Print QR Code
 	cleanPublicURL := strings.TrimSpace(config.AppConfig.PublicURL)
-	if cleanPublicURL != "" && cleanPublicURL != `""` {
-		printQRCode(cleanPublicURL)
-	} else if len(ips) > 0 {
-		printQRCode(fmt.Sprintf("http://%s:%s", ips[0].Address, port))
-	} else {
-		printQRCode(fmt.Sprintf("http://localhost:%s", port))
+	if cleanPublicURL == `""` {
+		cleanPublicURL = ""
 	}
 
-	if config.AppConfig.TelemetryEnabled && config.AppConfig.ErrorWebhookURL != "" {
-		fmt.Println("[Telemetry] 🛡️ Monitoramento de erros ativo -> Discord Webhook configurado")
-	} else if !config.AppConfig.TelemetryEnabled {
-		fmt.Println("[Telemetry] 🛑 Telemetria desativada pelo usuário (TELEMETRY_ENABLED=false)")
-	} else {
-		fmt.Println("[Telemetry] ℹ️ Telemetria Discord pendente (Defina ERROR_WEBHOOK_URL no .env para receber alertas)")
-	}
+	printServerDashboard(port, ips, cleanPublicURL, ver, build)
 
 	server := &http.Server{
 		Handler:           gateway.PanicRecoveryMiddleware(handler),

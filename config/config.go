@@ -1,6 +1,8 @@
 package config
 
 import (
+	"bufio"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,6 +47,78 @@ func loadEnvFile(envPath string) {
 			}
 		}
 	}
+}
+
+// isTerminal returns true if stdin is an interactive terminal console
+func isTerminal() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return (fi.Mode() & os.ModeCharDevice) != 0
+}
+
+// SaveEnvVar persists or updates an environment variable inside the .env file
+func SaveEnvVar(rootDir, key, val string) error {
+	envPath := filepath.Join(rootDir, ".env")
+	data, err := os.ReadFile(envPath)
+	if err != nil {
+		return os.WriteFile(envPath, []byte(fmt.Sprintf("%s=\"%s\"\n", key, val)), 0644)
+	}
+
+	lines := strings.Split(string(data), "\n")
+	found := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, key+"=") {
+			lines[i] = fmt.Sprintf("%s=\"%s\"", key, val)
+			found = true
+			break
+		}
+	}
+	if !found {
+		if len(lines) > 0 && lines[len(lines)-1] != "" {
+			lines = append(lines, fmt.Sprintf("%s=\"%s\"", key, val))
+		} else if len(lines) > 0 {
+			lines[len(lines)-1] = fmt.Sprintf("%s=\"%s\"", key, val)
+			lines = append(lines, "")
+		} else {
+			lines = append(lines, fmt.Sprintf("%s=\"%s\"", key, val))
+		}
+	}
+	output := strings.Join(lines, "\n")
+	return os.WriteFile(envPath, []byte(output), 0644)
+}
+
+// PromptTelemetryConsent requests explicit consent from user on first interactive run
+func PromptTelemetryConsent(rootDir string) bool {
+	fmt.Println()
+	fmt.Println("\033[36m╭─────────────────────────────────────────────────────────────╮\033[0m")
+	fmt.Println("\033[36m│\033[0m  \033[1mTELEMETRIA & PRIVACIDADE • ANTIGRAVITY SERVER\033[0m              \033[36m│\033[0m")
+	fmt.Println("\033[36m│\033[0m                                                             \033[36m│\033[0m")
+	fmt.Println("\033[36m│\033[0m  Deseja autorizar o envio anônimo de relatórios de falha    \033[36m│\033[0m")
+	fmt.Println("\033[36m│\033[0m  para nos ajudar a melhorar a estabilidade do servidor?     \033[36m│\033[0m")
+	fmt.Println("\033[36m│\033[0m                                                             \033[36m│\033[0m")
+	fmt.Println("\033[36m│\033[0m  \033[90m• 100% Anônimo: Código, conversas e tokens são protegidos  \033[36m│\033[0m")
+	fmt.Println("\033[36m│\033[0m  \033[90m• Você pode alterar sua escolha a qualquer momento no .env \033[36m│\033[0m")
+	fmt.Println("\033[36m╰─────────────────────────────────────────────────────────────╯\033[0m")
+	fmt.Print("Ativar envio de relatórios de erro anônimos? [s/N]: ")
+
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(strings.ToLower(input))
+
+	enabled := input == "s" || input == "sim" || input == "y" || input == "yes"
+	if enabled {
+		fmt.Println("\033[32m✓ Telemetria anônima ativada. Obrigado por contribuir!\033[0m")
+		_ = SaveEnvVar(rootDir, "TELEMETRY_ENABLED", "true")
+		_ = os.Setenv("TELEMETRY_ENABLED", "true")
+	} else {
+		fmt.Println("\033[90m✓ Telemetria desativada. Nenhuma informação será enviada.\033[0m")
+		_ = SaveEnvVar(rootDir, "TELEMETRY_ENABLED", "false")
+		_ = os.Setenv("TELEMETRY_ENABLED", "false")
+	}
+	return enabled
 }
 
 var AppConfig Config
@@ -177,8 +251,31 @@ func InitConfig() {
 		errorWebhook = os.Getenv("DISCORD_WEBHOOK_URL")
 	}
 
-	telemetryEnv := strings.ToLower(strings.TrimSpace(os.Getenv("TELEMETRY_ENABLED")))
-	telemetryEnabled := telemetryEnv != "false" && telemetryEnv != "0" && telemetryEnv != "no"
+	// Handle command-line flags for telemetry
+	for _, arg := range os.Args[1:] {
+		if arg == "--no-telemetry" || arg == "--disable-telemetry" {
+			_ = SaveEnvVar(rootDir, "TELEMETRY_ENABLED", "false")
+			_ = os.Setenv("TELEMETRY_ENABLED", "false")
+		} else if arg == "--telemetry" || arg == "--enable-telemetry" {
+			_ = SaveEnvVar(rootDir, "TELEMETRY_ENABLED", "true")
+			_ = os.Setenv("TELEMETRY_ENABLED", "true")
+		}
+	}
+
+	rawTelemetry := os.Getenv("TELEMETRY_ENABLED")
+	var telemetryEnabled bool
+	if rawTelemetry != "" {
+		telemetryClean := strings.ToLower(strings.TrimSpace(rawTelemetry))
+		telemetryEnabled = telemetryClean != "false" && telemetryClean != "0" && telemetryClean != "no"
+	} else {
+		// First run: ask for consent if attached to interactive terminal
+		if isTerminal() {
+			telemetryEnabled = PromptTelemetryConsent(rootDir)
+		} else {
+			// Non-interactive background service defaults to false (privacy-first)
+			telemetryEnabled = false
+		}
+	}
 
 	AppConfig = Config{
 		Port:               port,

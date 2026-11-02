@@ -165,10 +165,10 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		client.authUser = user
-		fmt.Printf("\n📱 [APP CONECTADO] Usuário autenticado com sucesso: %s (%s)\n\n", user.Email, clientIP)
+		fmt.Printf("\n  \033[32m[AUTH]\033[0m %s Usuário autenticado com sucesso: \033[1m%s\033[0m (%s)\n\n", time.Now().Format("15:04:05"), user.Email, clientIP)
 	} else if isRemote {
 		// Camada 2: Conexão remota SEM token é terminantemente bloqueada
-		fmt.Printf("[WS Auth] ⛔ Conexão REMOTA rejeitada (Token Ausente): %s\n", clientIP)
+		fmt.Printf("  \033[31m[AUTH]\033[0m %s Conexão remota rejeitada (token ausente): %s\n", time.Now().Format("15:04:05"), clientIP)
 		_ = client.Send(map[string]interface{}{
 			"type":    "auth_error",
 			"code":    "token_required",
@@ -187,7 +187,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		authDisplay = client.authUser.Email
 		userEmail = client.authUser.Email
 	}
-	fmt.Printf("[WS] Client connected from %s (Auth: %s)\n", clientIP, authDisplay)
+	fmt.Printf("  \033[36m[WS]\033[0m %s Cliente conectado de %s (Auth: %s)\n", time.Now().Format("15:04:05"), clientIP, authDisplay)
 
 	userConvs := services.ListConversationsForUser(userEmail)
 
@@ -250,7 +250,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, rawMsg, err := ws.ReadMessage()
 		if err != nil {
-			fmt.Printf("[WS] Client disconnected from %s (background tasks continue unaffected)\n", clientIP)
+			fmt.Printf("  \033[90m[WS]\033[0m %s Cliente desconectado de %s (tarefas em segundo plano mantidas)\n", time.Now().Format("15:04:05"), clientIP)
 			if client.session != nil {
 				client.session.Lock()
 				delete(client.session.Clients, ws)

@@ -13,7 +13,7 @@ if (-not $scriptDir) {
 Set-Location $scriptDir
 
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "     ANTIGRAVITY MOBILE SERVER - v1.4.0 (Build #25)         " -ForegroundColor Green
+Write-Host "                ANTIGRAVITY SERVER                          " -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Cyan
 
 # Carregar variaveis de ambiente do .env se existir

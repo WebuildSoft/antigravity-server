@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo -e "${CYAN}============================================================${RESET}"
-echo -e "${GREEN}     ANTIGRAVITY MOBILE SERVER - v1.4.0 (Build #25)         ${RESET}"
+echo -e "${GREEN}                ANTIGRAVITY SERVER                          ${RESET}"
 echo -e "${CYAN}============================================================${RESET}"
 
 # Carregar variáveis de ambiente se existir .env

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -87,8 +88,21 @@ func ExpandHome(pathStr string) (string, error) {
 }
 
 func resolveSafePath(targetPath, workspaceRoot string) (string, string, error) {
-	workspaceRoot = strings.TrimSpace(workspaceRoot)
-	targetPath = strings.TrimSpace(targetPath)
+	// 1. Sanitização defensiva contra aspas, apóstrofos, crases ou espaços residuais gerados por LLMs
+	workspaceRoot = strings.Trim(strings.TrimSpace(workspaceRoot), " \t\r\n\"'`")
+	targetPath = strings.Trim(strings.TrimSpace(targetPath), " \t\r\n\"'`")
+
+	// 2. Remove esquema file:// se presente
+	if strings.HasPrefix(targetPath, "file://") {
+		targetPath = strings.TrimPrefix(targetPath, "file://")
+	}
+
+	// 3. Remove sufixo de âncora/linha (#L10-20 ou #10)
+	if idx := strings.Index(targetPath, "#L"); idx != -1 {
+		targetPath = targetPath[:idx]
+	} else if idx := strings.Index(targetPath, "#"); idx != -1 {
+		targetPath = targetPath[:idx]
+	}
 
 	// Se o workspace vier vazio, "~" ou ".", utiliza o DefaultWorkspace
 	if workspaceRoot == "" || workspaceRoot == "~" || workspaceRoot == "." {
@@ -105,11 +119,18 @@ func resolveSafePath(targetPath, workspaceRoot string) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("invalid workspace root: %w", err)
 	}
+	root = filepath.Clean(root)
 
 	// Security: validate that workspaceRoot is within allowed default workspace boundary
 	defaultRoot, err := filepath.Abs(config.AppConfig.DefaultWorkspace)
 	if err == nil && defaultRoot != "" && defaultRoot != "/" {
-		if root != defaultRoot && !strings.HasPrefix(root, defaultRoot+string(filepath.Separator)) {
+		dComp := defaultRoot
+		rComp := root
+		if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+			dComp = strings.ToLower(dComp)
+			rComp = strings.ToLower(rComp)
+		}
+		if rComp != dComp && !strings.HasPrefix(rComp, dComp+string(filepath.Separator)) {
 			return "", "", errors.New("access denied: workspace is outside allowed boundary")
 		}
 	}
@@ -121,18 +142,54 @@ func resolveSafePath(targetPath, workspaceRoot string) (string, string, error) {
 		targetPath = targetPath[2:]
 	}
 
+	// Tratar caminho Windows com barra inicial (ex: "/C:/Users/..." -> "C:/Users/...")
+	cleanTarget := strings.Trim(targetPath, " \t\r\n\"'`")
+	if len(cleanTarget) >= 3 && (cleanTarget[0] == '/' || cleanTarget[0] == '\\') && cleanTarget[2] == ':' {
+		cleanTarget = cleanTarget[1:]
+	}
+
 	// Sanitiza targetPath com filepath.Clean
-	cleanRel := filepath.Clean(filepath.FromSlash(targetPath))
+	cleanRel := filepath.Clean(filepath.FromSlash(cleanTarget))
+	cleanRel = strings.Trim(cleanRel, " \t\r\n\"'`")
 	if cleanRel == "." || cleanRel == "/" || cleanRel == `\` {
 		cleanRel = ""
 	}
 
-	resolved, err := filepath.Abs(filepath.Join(root, cleanRel))
+	var resolved string
+	isAbs := filepath.IsAbs(cleanRel)
+	// No Windows, caminhos como "C:\..." têm drive letter
+	if !isAbs && len(cleanRel) >= 2 && cleanRel[1] == ':' {
+		isAbs = true
+	}
+
+	if isAbs {
+		resolved = cleanRel
+	} else {
+		resolved = filepath.Join(root, cleanRel)
+	}
+
+	resolved, err = filepath.Abs(resolved)
 	if err != nil {
 		return "", "", err
 	}
+	resolved = filepath.Clean(resolved)
 
-	if resolved != root && !strings.HasPrefix(resolved, root+string(filepath.Separator)) {
+	// Proteção contra duplicação acidental de raiz (ex: /workspace/workspace/subpath)
+	dupRoot := filepath.Join(root, root)
+	if strings.HasPrefix(resolved, dupRoot) {
+		resolved = filepath.Join(root, strings.TrimPrefix(resolved, dupRoot))
+	}
+
+	// Validação de fronteira (boundary check) compatível com qualquer SO
+	rootComp := root
+	resComp := resolved
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		rootComp = strings.ToLower(rootComp)
+		resComp = strings.ToLower(resComp)
+	}
+
+	sep := string(filepath.Separator)
+	if resComp != rootComp && !strings.HasPrefix(resComp, rootComp+sep) {
 		return "", "", errors.New("access denied: path is outside workspace boundary")
 	}
 	return resolved, root, nil

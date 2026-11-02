@@ -226,12 +226,20 @@ func ImportSingleConversationTranscript(convID string) {
 				for i, tc := range tcList {
 					if tcMap, ok := tc.(map[string]interface{}); ok {
 						name, _ := tcMap["name"].(string)
-						args, _ := tcMap["args"].(map[string]interface{})
+						rawArgs, _ := tcMap["args"].(map[string]interface{})
+						cleanArgs := make(map[string]interface{})
+						for k, v := range rawArgs {
+							if strVal, ok := v.(string); ok {
+								cleanArgs[k] = strings.Trim(strings.TrimSpace(strVal), " \t\r\n\"'`")
+							} else {
+								cleanArgs[k] = v
+							}
+						}
 						currentAgentTCs = append(currentAgentTCs, ToolCallRecord{
 							ID:      fmt.Sprintf("tool_%d_%d", stepIdx, i),
 							Name:    name,
-							Summary: FormatToolSummary(name, args),
-							Args:    args,
+							Summary: FormatToolSummary(name, cleanArgs),
+							Args:    cleanArgs,
 							Status:  "completed",
 						})
 					}

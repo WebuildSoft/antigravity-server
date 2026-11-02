@@ -221,7 +221,15 @@ func LoadConversationMessages(convID string, limit int) []ChatMessage {
 				for i, tc := range tcList {
 					if tcMap, ok := tc.(map[string]interface{}); ok {
 						name, _ := tcMap["name"].(string)
-						args, _ := tcMap["args"].(map[string]interface{})
+						rawArgs, _ := tcMap["args"].(map[string]interface{})
+						cleanArgs := make(map[string]interface{})
+						for k, v := range rawArgs {
+							if strVal, ok := v.(string); ok {
+								cleanArgs[k] = strings.Trim(strings.TrimSpace(strVal), " \t\r\n\"'`")
+							} else {
+								cleanArgs[k] = v
+							}
+						}
 						stepIdx := 0
 						if s, ok := item["step_index"].(float64); ok {
 							stepIdx = int(s)
@@ -229,8 +237,8 @@ func LoadConversationMessages(convID string, limit int) []ChatMessage {
 						toolCalls = append(toolCalls, ToolCall{
 							ID:      fmt.Sprintf("tool_%d_%d", stepIdx, i),
 							Name:    name,
-							Summary: FormatToolSummary(name, args),
-							Args:    args,
+							Summary: FormatToolSummary(name, cleanArgs),
+							Args:    cleanArgs,
 							Status:  "completed",
 						})
 					}

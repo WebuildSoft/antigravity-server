@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
-  "build": 26,
-  "releasedAt": "2026-11-01T23:45:00Z",
-  "changelog": "Correção de mensagens duplicadas no chat, debounce no envio e atualização direta via GitHub Releases",
-  "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
+  "build": 38,
+  "releasedAt": "2026-11-02T08:05:00Z",
+  "changelog": "Visualização de Diffs Inline (Unified Diff) e alternador Código/Diffs no Editor, com Git Gutter e suporte a salvar",
+  "downloadUrl": "https://gravity.lnki.pro/app.apk"
 }
