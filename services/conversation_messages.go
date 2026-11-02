@@ -225,7 +225,11 @@ func LoadConversationMessages(convID string, limit int) []ChatMessage {
 						cleanArgs := make(map[string]interface{})
 						for k, v := range rawArgs {
 							if strVal, ok := v.(string); ok {
-								cleanArgs[k] = strings.Trim(strings.TrimSpace(strVal), " \t\r\n\"'`")
+								if k == "Target" || k == "Replacement" || k == "Content" || k == "target" || k == "replacement" || k == "content" {
+									cleanArgs[k] = strVal
+								} else {
+									cleanArgs[k] = strings.Trim(strings.TrimSpace(strVal), " \t\r\n\"'`")
+								}
 							} else {
 								cleanArgs[k] = v
 							}

@@ -137,13 +137,10 @@ if [ ! -f "$SCRIPT_DIR/antigravity-server" ]; then
         echo -e "${CYAN}Compilando antigravity-server...${RESET}"
         go build -ldflags="-s -w" -o "$SCRIPT_DIR/antigravity-server" .
     else
-        echo -e "${RED}❌ Binário antigravity-server não encontrado e Go não está instalado.${RESET}"
+        echo -e "${RED}[ERRO] Binário antigravity-server não encontrado e Go não está instalado.${RESET}"
         echo "Por favor execute ./install.sh primeiro."
         exit 1
     fi
 fi
 
-"$SCRIPT_DIR/antigravity-server" &
-SERVER_PID=$!
-
-wait "$SERVER_PID"
+exec "$SCRIPT_DIR/antigravity-server"

@@ -13,7 +13,7 @@ RESET="\033[0m"
 
 echo -e "${BOLD}${CYAN}"
 echo "============================================================"
-echo "    🚀 INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE           "
+echo "    INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE               "
 echo "============================================================"
 echo -e "${RESET}"
 
@@ -100,27 +100,27 @@ if [ "$AUTH_OK" = true ]; then
 else
     echo -e "      ${YELLOW}! Nenhuma conta Google conectada ao agy.${RESET}"
     if [ -t 0 ]; then
-        echo -e "      ${CYAN}🔑 Vamos iniciar a autenticação interativa agora...${RESET}"
+        echo -e "      ${CYAN}[AUTH] Vamos iniciar a autenticação interativa agora...${RESET}"
         echo -e "      Uma janela ou link será exibido abaixo para você autorizar no navegador."
         echo ""
         "$AGY_PATH" || true
         echo ""
         if "$AGY_PATH" models >/dev/null 2>&1; then
-            echo -e "      ${GREEN}✓ Login realizado com sucesso!${RESET}"
+            echo -e "      ${GREEN}[OK] Login realizado com sucesso!${RESET}"
         else
-            echo -e "      ${YELLOW}⚠️ O login não foi concluído. O servidor ainda iniciará normalmente.${RESET}"
+            echo -e "      ${YELLOW}[AVISO] O login não foi concluído. O servidor ainda iniciará normalmente.${RESET}"
         fi
     elif [ -c /dev/tty ]; then
-        echo -e "      ${CYAN}🔑 Vamos iniciar a autenticação interativa agora...${RESET}"
+        echo -e "      ${CYAN}[AUTH] Vamos iniciar a autenticação interativa agora...${RESET}"
         echo -e "      Uma janela ou link será exibido abaixo para você autorizar no navegador."
         echo ""
         "$AGY_PATH" < /dev/tty || true
         echo ""
         if "$AGY_PATH" models >/dev/null 2>&1; then
-            echo -e "      ${GREEN}✓ Login realizado com sucesso!${RESET}"
+            echo -e "      ${GREEN}[OK] Login realizado com sucesso!${RESET}"
         fi
     else
-        echo -e "      ${YELLOW}⚠️ Execute 'agy' no terminal quando desejar conectar sua conta Google.${RESET}"
+        echo -e "      ${YELLOW}[AVISO] Execute 'agy' no terminal quando desejar conectar sua conta Google.${RESET}"
     fi
 fi
 
@@ -211,10 +211,14 @@ fi
 chmod +x "$SCRIPT_DIR/antigravity-server"
 
 echo -e "\n${BOLD}${GREEN}============================================================"
-echo "    🎉 INSTALAÇÃO CONCLUÍDA COM SUCESSO!                    "
+echo "    INSTALAÇÃO CONCLUÍDA COM SUCESSO                        "
 echo -e "============================================================${RESET}"
 echo -e "Para iniciar o servidor no futuro a qualquer momento, execute:"
 echo -e "  ${CYAN}cd \"$SCRIPT_DIR\" && ./start.sh${RESET}\n"
-echo -e "${BOLD}${GREEN}🚀 Iniciando o servidor automaticamente agora...${RESET}\n"
+echo -e "${BOLD}${GREEN}[OK] Iniciando o servidor automaticamente agora...${RESET}\n"
 
-exec "$SCRIPT_DIR/start.sh"
+if [ -c /dev/tty ]; then
+    exec "$SCRIPT_DIR/start.sh" < /dev/tty
+else
+    exec "$SCRIPT_DIR/start.sh"
+fi

@@ -3,9 +3,11 @@ package config
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -49,13 +51,30 @@ func loadEnvFile(envPath string) {
 	}
 }
 
-// isTerminal returns true if stdin is an interactive terminal console
-func isTerminal() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		return false
+// getTerminalStdin returns a reader for the interactive terminal (falling back to /dev/tty or CONIN$)
+func getTerminalStdin() (io.Reader, func(), bool) {
+	if fi, err := os.Stdin.Stat(); err == nil && (fi.Mode()&os.ModeCharDevice) != 0 {
+		return os.Stdin, func() {}, true
 	}
-	return (fi.Mode() & os.ModeCharDevice) != 0
+	if runtime.GOOS != "windows" {
+		if f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0); err == nil {
+			return f, func() { _ = f.Close() }, true
+		}
+	} else {
+		if f, err := os.OpenFile("CONIN$", os.O_RDWR, 0); err == nil {
+			return f, func() { _ = f.Close() }, true
+		}
+	}
+	return nil, func() {}, false
+}
+
+// isTerminal returns true if stdin or system TTY is an interactive terminal console
+func isTerminal() bool {
+	_, cleanup, ok := getTerminalStdin()
+	if ok {
+		cleanup()
+	}
+	return ok
 }
 
 // SaveEnvVar persists or updates an environment variable inside the .env file
@@ -92,6 +111,12 @@ func SaveEnvVar(rootDir, key, val string) error {
 
 // PromptTelemetryConsent requests explicit consent from user on first interactive run
 func PromptTelemetryConsent(rootDir string) bool {
+	termReader, cleanup, ok := getTerminalStdin()
+	if !ok {
+		return false
+	}
+	defer cleanup()
+
 	fmt.Println()
 	fmt.Println("\033[36m╭─────────────────────────────────────────────────────────────╮\033[0m")
 	fmt.Println("\033[36m│\033[0m  \033[1mTELEMETRIA & PRIVACIDADE • ANTIGRAVITY SERVER\033[0m              \033[36m│\033[0m")
@@ -104,17 +129,17 @@ func PromptTelemetryConsent(rootDir string) bool {
 	fmt.Println("\033[36m╰─────────────────────────────────────────────────────────────╯\033[0m")
 	fmt.Print("Ativar envio de relatórios de erro anônimos? [s/N]: ")
 
-	reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewReader(termReader)
 	input, _ := reader.ReadString('\n')
 	input = strings.TrimSpace(strings.ToLower(input))
 
 	enabled := input == "s" || input == "sim" || input == "y" || input == "yes"
 	if enabled {
-		fmt.Println("\033[32m✓ Telemetria anônima ativada. Obrigado por contribuir!\033[0m")
+		fmt.Println("\033[32m[OK] Telemetria anônima ativada. Obrigado por contribuir!\033[0m")
 		_ = SaveEnvVar(rootDir, "TELEMETRY_ENABLED", "true")
 		_ = os.Setenv("TELEMETRY_ENABLED", "true")
 	} else {
-		fmt.Println("\033[90m✓ Telemetria desativada. Nenhuma informação será enviada.\033[0m")
+		fmt.Println("\033[90m[OK] Telemetria desativada. Nenhuma informação será enviada.\033[0m")
 		_ = SaveEnvVar(rootDir, "TELEMETRY_ENABLED", "false")
 		_ = os.Setenv("TELEMETRY_ENABLED", "false")
 	}

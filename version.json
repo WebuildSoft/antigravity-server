@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
-  "build": 38,
-  "releasedAt": "2026-11-02T08:05:00Z",
-  "changelog": "Visualização de Diffs Inline (Unified Diff) e alternador Código/Diffs no Editor, com Git Gutter e suporte a salvar",
+  "build": 39,
+  "releasedAt": "2026-11-02T08:40:00Z",
+  "changelog": "Reconstrução precisa da versão base para Diffs na abertura de edições da IA e preservação de indentação",
   "downloadUrl": "https://gravity.lnki.pro/app.apk"
 }

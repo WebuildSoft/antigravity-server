@@ -57,7 +57,7 @@ func printQRCode(targetURL string) {
 
 func printServerDashboard(port string, ips []services.NetworkAddress, publicURL string, ver string, build int) {
 	fmt.Println()
-	title := fmt.Sprintf("ANTIGRAVITY COMPANION SERVER • v%s (Build #%d)", ver, build)
+	title := fmt.Sprintf("ANTIGRAVITY SERVER • v%s (Build #%d)", ver, build)
 	sub := "WebuildSoft Engine • Alta Performance & Latência Zero"
 
 	fmt.Printf("%s╭─────────────────────────────────────────────────────────────╮%s\n", colorCyan, colorReset)
