@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os/exec"
-	"path/filepath"
 
-	"antigravity-bridge/config"
 	"antigravity-bridge/services"
 )
 
@@ -224,16 +221,14 @@ func handleAccountStartLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	scriptPath := filepath.Join(filepath.Dir(config.AppConfig.VersionFile), "scripts", "add_google_account.sh")
-	cmd := exec.Command("open", "-a", "Terminal", scriptPath)
-	if err := cmd.Start(); err != nil {
+	if err := services.StartInteractiveLoginTerminal(); err != nil {
 		respondJSON(w, http.StatusInternalServerError, map[string]interface{}{"error": fmt.Sprintf("Falha ao abrir terminal: %v", err)})
 		return
 	}
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,
-		"message": "Terminal aberto no Mac para login Google",
+		"message": "Terminal aberto no computador para conectar nova conta Google",
 	})
 }
 

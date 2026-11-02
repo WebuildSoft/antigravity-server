@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -477,4 +478,38 @@ func TestExpandHomeAndWorkspaceTildeResolution(t *testing.T) {
 		t.Fatalf("Conteúdo lido incorreto: %s", contentRes.Content)
 	}
 	t.Logf("✓ ReadFileContent com workspace='~' leu o arquivo com sucesso!")
+}
+
+func TestDispatchStartupTelemetryToEndpoint(t *testing.T) {
+	receivedChan := make(chan map[string]interface{}, 1)
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]interface{}
+		_ = json.NewDecoder(r.Body).Decode(&payload)
+		receivedChan <- payload
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer mockServer.Close()
+
+	os.Setenv("TELEMETRY_ENDPOINT", mockServer.URL)
+	os.Setenv("TELEMETRY_ENABLED", "true")
+	config.AppConfig.TelemetryEnabled = true
+	defer os.Unsetenv("TELEMETRY_ENDPOINT")
+
+	services.DispatchStartupTelemetry("1.4.0", 39)
+
+	select {
+	case payload := <-receivedChan:
+		if payload["machine_id"] == nil || payload["machine_id"] == "" {
+			t.Fatalf("Esperava machine_id válido, obteve: %v", payload["machine_id"])
+		}
+		if payload["app_version"] != "1.4.0" {
+			t.Fatalf("Versão incorreta no payload: %v", payload["app_version"])
+		}
+		if payload["event"] != "server_start" {
+			t.Fatalf("Evento incorreto no payload: %v", payload["event"])
+		}
+		t.Logf("✓ Telemetria de inicialização disparada com sucesso para endpoint personalizado: %v", payload)
+	case <-time.After(2 * time.Second):
+		t.Fatalf("Timeout: Telemetria de inicialização não foi entregue ao endpoint mock")
+	}
 }

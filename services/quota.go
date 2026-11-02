@@ -138,13 +138,17 @@ func fetchQuotaFromAgy() (*QuotaResponse, error) {
 }
 
 func GetQuotaData(forceRefresh bool) (*QuotaResponse, error) {
+	if forceRefresh {
+		return InvalidateAndRefreshQuota()
+	}
+
 	quotaMutex.RLock()
 	cached := quotaCache
 	quotaMutex.RUnlock()
 
 	// If we already have quota in cache, return it INSTANTLY (<0.1ms)
 	if cached != nil {
-		if forceRefresh || time.Since(quotaCacheTime) > 45*time.Second {
+		if time.Since(quotaCacheTime) > 45*time.Second {
 			// Trigger fresh update in background without blocking the client
 			go fetchQuotaFromAgy()
 		}
@@ -157,11 +161,16 @@ func GetQuotaData(forceRefresh bool) (*QuotaResponse, error) {
 	return fetchQuotaFromAgy()
 }
 
-// InvalidateAndRefreshQuota purges the current quota cache and fetches fresh quotas immediately.
-func InvalidateAndRefreshQuota() (*QuotaResponse, error) {
+// InvalidateQuotaCache clears the in-memory quota cache immediately.
+func InvalidateQuotaCache() {
 	quotaMutex.Lock()
 	quotaCache = nil
 	quotaMutex.Unlock()
+}
+
+// InvalidateAndRefreshQuota purges the current quota cache and fetches fresh quotas immediately.
+func InvalidateAndRefreshQuota() (*QuotaResponse, error) {
+	InvalidateQuotaCache()
 	return fetchQuotaFromAgy()
 }
 

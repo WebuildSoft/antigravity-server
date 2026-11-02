@@ -5,12 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"antigravity-bridge/config"
 )
 
 type AccountProfile struct {
@@ -335,10 +340,10 @@ func SwitchAccount(targetEmail string) (*AccountProfile, error) {
 
 	fmt.Printf("[Accounts] Conta ativada com sucesso: %s\n", targetEmail)
 
-	// Invalidate quota cache and refresh quota asynchronously under the new account
+	// Invalidate quota cache synchronously so immediate queries do not see stale limits
+	InvalidateQuotaCache()
 	go func() {
-		time.Sleep(200 * time.Millisecond)
-		InvalidateAndRefreshQuota()
+		_, _ = fetchQuotaFromAgy()
 	}()
 
 	return &activeProfile, nil
@@ -447,4 +452,350 @@ func RemoveAccount(email string) error {
 	}
 
 	return nil
+}
+
+func getScriptsDir() string {
+	base := filepath.Dir(config.AppConfig.VersionFile)
+	if base == "" || base == "." {
+		if exe, err := os.Executable(); err == nil {
+			base = filepath.Dir(exe)
+		}
+	}
+	dir := filepath.Join(base, "scripts")
+	_ = os.MkdirAll(dir, 0755)
+	return dir
+}
+
+const shAddAccountScript = `#!/usr/bin/env bash
+set -e
+
+GEMINI_DIR="$HOME/.gemini"
+PROFILES_DIR="$GEMINI_DIR/profiles"
+CREDS_FILE="$GEMINI_DIR/oauth_creds.json"
+ACCOUNTS_FILE="$GEMINI_DIR/google_accounts.json"
+PORT="${PORT:-4040}"
+
+mkdir -p "$PROFILES_DIR"
+
+echo ""
+echo "=========================================================="
+echo "  🔐 Antigravity - Assistente de Conexão de Nova Conta"
+echo "=========================================================="
+echo ""
+
+# Backup da conta atual se existir
+if [ -f "$CREDS_FILE" ]; then
+    CURRENT_EMAIL=$(python3 -c "
+import json, base64, sys
+try:
+    with open('$CREDS_FILE') as f: d = json.load(f)
+    t = d.get('id_token', '')
+    if t:
+        p = t.split('.')[1] + '=='
+        print(json.loads(base64.urlsafe_b64decode(p[:len(p)-len(p)%4])).get('email', ''))
+except: pass
+" 2>/dev/null || true)
+    if [ -n "$CURRENT_EMAIL" ]; then
+        echo "💾 Salvando backup da conta atual ($CURRENT_EMAIL)..."
+        mkdir -p "$PROFILES_DIR/$CURRENT_EMAIL"
+        cp "$CREDS_FILE" "$PROFILES_DIR/$CURRENT_EMAIL/oauth_creds.json"
+    fi
+    mv "$CREDS_FILE" "$CREDS_FILE.bak"
+fi
+
+echo "👉 Uma janela do navegador será aberta pelo Antigravity CLI oficial."
+echo "👉 Faça login com a NOVA CONTA GOOGLE que deseja adicionar."
+echo "👉 Depois de autorizar no navegador, digite 'exit' no terminal para concluir."
+echo "----------------------------------------------------------"
+
+AGY_BIN="$(which agy 2>/dev/null || echo "$HOME/.local/bin/agy")"
+if [ ! -x "$AGY_BIN" ]; then
+    AGY_BIN="$HOME/.gemini/antigravity-cli/bin/agy"
+fi
+
+"$AGY_BIN" || true
+
+if [ -f "$CREDS_FILE" ]; then
+    NEW_EMAIL=$(python3 -c "
+import json, base64
+try:
+    with open('$CREDS_FILE') as f: d = json.load(f)
+    t = d.get('id_token', '')
+    if t:
+        p = t.split('.')[1] + '=='
+        print(json.loads(base64.urlsafe_b64decode(p[:len(p)-len(p)%4])).get('email', ''))
+except: pass
+" 2>/dev/null || true)
+    if [ -n "$NEW_EMAIL" ]; then
+        echo ""
+        echo "🎉 Sucesso! Nova conta autenticada: $NEW_EMAIL"
+        mkdir -p "$PROFILES_DIR/$NEW_EMAIL"
+        cp "$CREDS_FILE" "$PROFILES_DIR/$NEW_EMAIL/oauth_creds.json"
+
+        # Notifica o backend Go
+        curl -s -X POST "http://localhost:${PORT}/api/accounts/switch" -H "Content-Type: application/json" -d "{\"email\": \"$NEW_EMAIL\"}" >/dev/null 2>&1 || true
+
+        echo "✅ Conta $NEW_EMAIL registrada nos perfis!"
+        echo "📱 Ela já está disponível no seu app mobile para alternar com 1 toque."
+        rm -f "$CREDS_FILE.bak"
+        echo ""
+        read -p "Pressione Enter para fechar esta janela..."
+        exit 0
+    fi
+fi
+
+# Se falhou ou cancelou, restaura o backup
+if [ -f "$CREDS_FILE.bak" ]; then
+    echo "⚠️ Login cancelado ou não concluído. Restaurando conta anterior..."
+    mv "$CREDS_FILE.bak" "$CREDS_FILE"
+fi
+
+echo "❌ Nenhuma nova conta foi configurada."
+echo ""
+read -p "Pressione Enter para fechar esta janela..."
+`
+
+const psAddAccountScript = `$ErrorActionPreference = "Continue"
+
+$geminiDir = Join-Path $env:USERPROFILE ".gemini"
+$profilesDir = Join-Path $geminiDir "profiles"
+$credsFile = Join-Path $geminiDir "oauth_creds.json"
+$accountsFile = Join-Path $geminiDir "google_accounts.json"
+$port = if ($env:PORT) { $env:PORT } else { "4040" }
+
+if (!(Test-Path $profilesDir)) {
+    New-Item -ItemType Directory -Force -Path $profilesDir | Out-Null
+}
+
+Write-Host ""
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host "  🔐 Antigravity - Assistente de Conexao de Nova Conta" -ForegroundColor Green
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host ""
+
+function Get-EmailFromCreds($path) {
+    if (Test-Path $path) {
+        try {
+            $json = Get-Content -Raw -Path $path | ConvertFrom-Json
+            if ($json.id_token) {
+                $parts = $json.id_token.Split('.')
+                if ($parts.Length -ge 2) {
+                    $payload = $parts[1]
+                    $mod = $payload.Length % 4
+                    if ($mod -gt 0) { $payload += "=" * (4 - $mod) }
+                    $bytes = [System.Convert]::FromBase64String($payload)
+                    $decoded = [System.Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json
+                    if ($decoded.email) { return $decoded.email }
+                }
+            }
+            if ($json.email) { return $json.email }
+        } catch {}
+    }
+    return $null
+}
+
+if (Test-Path $credsFile) {
+    $currentEmail = Get-EmailFromCreds $credsFile
+    if ($currentEmail) {
+        Write-Host "Salvando backup da conta atual ($currentEmail)..." -ForegroundColor Yellow
+        $profileDir = Join-Path $profilesDir $currentEmail
+        if (!(Test-Path $profileDir)) { New-Item -ItemType Directory -Force -Path $profileDir | Out-Null }
+        Copy-Item -Force $credsFile (Join-Path $profileDir "oauth_creds.json")
+    }
+    Move-Item -Force $credsFile "$credsFile.bak"
+}
+
+Write-Host "Uma janela do navegador sera aberta pelo Antigravity CLI oficial." -ForegroundColor Cyan
+Write-Host "Faca login com a NOVA CONTA GOOGLE que deseja adicionar." -ForegroundColor Cyan
+Write-Host "Depois de autorizar no navegador, digite 'exit' no terminal para concluir." -ForegroundColor Cyan
+Write-Host "----------------------------------------------------------"
+
+& agy
+
+if (Test-Path $credsFile) {
+    $newEmail = Get-EmailFromCreds $credsFile
+    if ($newEmail) {
+        Write-Host ""
+        Write-Host "Sucesso! Nova conta autenticada: $newEmail" -ForegroundColor Green
+        $newProfileDir = Join-Path $profilesDir $newEmail
+        if (!(Test-Path $newProfileDir)) { New-Item -ItemType Directory -Force -Path $newProfileDir | Out-Null }
+        Copy-Item -Force $credsFile (Join-Path $newProfileDir "oauth_creds.json")
+
+        try {
+            $body = @{ email = $newEmail } | ConvertTo-Json
+            Invoke-RestMethod -Uri "http://localhost:$port/api/accounts/switch" -Method Post -ContentType "application/json" -Body $body | Out-Null
+        } catch {}
+
+        Write-Host "Conta $newEmail registrada nos perfis!" -ForegroundColor Green
+        Write-Host "Ela ja esta disponivel no seu app mobile para alternar com 1 toque." -ForegroundColor Green
+        Remove-Item -Force "$credsFile.bak" -ErrorAction SilentlyContinue
+        Write-Host ""
+        Write-Host "Pressione qualquer tecla para fechar..."
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        exit 0
+    }
+}
+
+if (Test-Path "$credsFile.bak") {
+    Write-Host "Login cancelado. Restaurando conta anterior..." -ForegroundColor Yellow
+    Move-Item -Force "$credsFile.bak" $credsFile
+}
+
+Write-Host "Nenhuma nova conta foi configurada." -ForegroundColor Red
+Write-Host ""
+Write-Host "Pressione qualquer tecla para fechar..."
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+`
+
+// EnsureAddAccountScripts verifies and generates add_google_account.sh and .ps1 if missing.
+func EnsureAddAccountScripts() {
+	sDir := getScriptsDir()
+	shPath := filepath.Join(sDir, "add_google_account.sh")
+	if _, err := os.Stat(shPath); os.IsNotExist(err) {
+		_ = os.WriteFile(shPath, []byte(shAddAccountScript), 0755)
+	} else {
+		_ = os.Chmod(shPath, 0755)
+	}
+
+	psPath := filepath.Join(sDir, "add_google_account.ps1")
+	if _, err := os.Stat(psPath); os.IsNotExist(err) {
+		_ = os.WriteFile(psPath, []byte(psAddAccountScript), 0755)
+	}
+}
+
+// StartInteractiveLoginTerminal opens a terminal window on macOS, Windows, or Linux to execute the login helper.
+func StartInteractiveLoginTerminal() error {
+	EnsureAddAccountScripts()
+	sDir := getScriptsDir()
+
+	switch runtime.GOOS {
+	case "darwin":
+		shPath := filepath.Join(sDir, "add_google_account.sh")
+		cmd := exec.Command("open", "-a", "Terminal", shPath)
+		return cmd.Start()
+
+	case "windows":
+		psPath := filepath.Join(sDir, "add_google_account.ps1")
+		cmd := exec.Command("cmd.exe", "/c", "start", "powershell.exe", "-NoExit", "-ExecutionPolicy", "Bypass", "-File", psPath)
+		return cmd.Start()
+
+	case "linux":
+		shPath := filepath.Join(sDir, "add_google_account.sh")
+		terminals := []struct {
+			bin  string
+			args []string
+		}{
+			{"x-terminal-emulator", []string{"-e", shPath}},
+			{"gnome-terminal", []string{"--", shPath}},
+			{"konsole", []string{"-e", shPath}},
+			{"xfce4-terminal", []string{"-e", shPath}},
+			{"alacritty", []string{"-e", shPath}},
+			{"kitty", []string{shPath}},
+			{"xterm", []string{"-e", shPath}},
+		}
+		for _, t := range terminals {
+			if p, err := exec.LookPath(t.bin); err == nil && p != "" {
+				cmd := exec.Command(t.bin, t.args...)
+				return cmd.Start()
+			}
+		}
+		exe, _ := os.Executable()
+		return fmt.Errorf("nenhum emulador de terminal gráfico encontrado. Execute no terminal: %s add-account", exe)
+
+	default:
+		return fmt.Errorf("sistema operacional não suportado: %s", runtime.GOOS)
+	}
+}
+
+// RunInteractiveAddAccount handles the CLI mode './antigravity-server add-account'.
+func RunInteractiveAddAccount() {
+	geminiDir := getGeminiDir()
+	profilesDir := getProfilesDir()
+	credsPath := filepath.Join(geminiDir, "oauth_creds.json")
+	bakPath := filepath.Join(geminiDir, "oauth_creds.json.bak")
+	_ = os.MkdirAll(profilesDir, 0755)
+
+	fmt.Println()
+	fmt.Println("==========================================================")
+	fmt.Println("  🔐 Antigravity - Assistente de Conexão de Nova Conta")
+	fmt.Println("==========================================================")
+	fmt.Println()
+
+	if _, err := os.Stat(credsPath); err == nil {
+		if curEmail, _, _, err := extractInfoFromCreds(credsPath); err == nil && curEmail != "" {
+			curDir := filepath.Join(profilesDir, curEmail)
+			_ = os.MkdirAll(curDir, 0755)
+			_ = copyFile(credsPath, filepath.Join(curDir, "oauth_creds.json"))
+			fmt.Printf("💾 Backup da conta atual realizado: %s\n", curEmail)
+		}
+		_ = os.Rename(credsPath, bakPath)
+	}
+
+	fmt.Println("👉 Uma janela do navegador será aberta pelo Antigravity CLI oficial.")
+	fmt.Println("👉 Faça login com a NOVA CONTA GOOGLE que deseja adicionar.")
+	fmt.Println("👉 Quando concluir no navegador, digite 'exit' no terminal do Antigravity.")
+	fmt.Println("----------------------------------------------------------")
+
+	agyBin := config.AppConfig.AgyBin
+	if agyBin == "" || agyBin == "agy" {
+		if p, err := exec.LookPath("agy"); err == nil && p != "" {
+			agyBin = p
+		} else {
+			home, _ := os.UserHomeDir()
+			agyBin = filepath.Join(home, ".local", "bin", "agy")
+		}
+	}
+
+	cmd := exec.Command(agyBin)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	_ = cmd.Run()
+
+	if _, err := os.Stat(credsPath); err == nil {
+		newEmail, name, pic, err := extractInfoFromCreds(credsPath)
+		if err == nil && newEmail != "" {
+			newDir := filepath.Join(profilesDir, newEmail)
+			_ = os.MkdirAll(newDir, 0755)
+			_ = copyFile(credsPath, filepath.Join(newDir, "oauth_creds.json"))
+
+			info := AccountProfile{
+				Email:    newEmail,
+				Name:     name,
+				Picture:  pic,
+				IsActive: true,
+				LastUsed: time.Now().UnixMilli(),
+			}
+			b, _ := json.MarshalIndent(info, "", "  ")
+			_ = os.WriteFile(filepath.Join(newDir, "info.json"), b, 0644)
+			_ = os.Remove(bakPath)
+
+			fmt.Printf("\n🎉 Sucesso! Nova conta vinculada: %s\n", newEmail)
+			fmt.Println("📱 Ela já está pronta no seu app mobile para alternar com 1 toque!")
+
+			port := config.AppConfig.Port
+			if port == "" {
+				port = "4040"
+			}
+			switchBody := fmt.Sprintf(`{"email":"%s"}`, newEmail)
+			resp, sErr := http.Post("http://127.0.0.1:"+port+"/api/accounts/switch", "application/json", strings.NewReader(switchBody))
+			if sErr == nil && resp != nil {
+				_ = resp.Body.Close()
+			}
+
+			fmt.Println("\nPressione Enter para fechar...")
+			buf := make([]byte, 1)
+			_, _ = os.Stdin.Read(buf)
+			return
+		}
+	}
+
+	if _, err := os.Stat(bakPath); err == nil {
+		fmt.Println("⚠️ Login cancelado. Restaurando conta anterior...")
+		_ = os.Rename(bakPath, credsPath)
+	}
+	fmt.Println("❌ Nenhuma nova conta foi configurada.")
+	fmt.Println("\nPressione Enter para fechar...")
+	buf := make([]byte, 1)
+	_, _ = os.Stdin.Read(buf)
 }

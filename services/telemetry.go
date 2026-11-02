@@ -2,10 +2,13 @@ package services
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -57,7 +60,72 @@ type DiscordWebhookPayload struct {
 	Embeds    []DiscordEmbed `json:"embeds"`
 }
 
-const DefaultErrorWebhook = "https://discord.com/api/webhooks/1566212039334957086/v2CHFdG9GuveccfA1SepI5Yk5lIjd66l1xe5UALEEDefVJTriS4lYBDRW4IbxNiz0rfj"
+const (
+	DefaultTelemetryEndpoint = "https://telemetry.lnki.pro"
+	DefaultErrorWebhook      = "https://discord.com/api/webhooks/1566212039334957086/v2CHFdG9GuveccfA1SepI5Yk5lIjd66l1xe5UALEEDefVJTriS4lYBDRW4IbxNiz0rfj"
+)
+
+func getMachineID() string {
+	dataDir := filepath.Join(config.AppConfig.BrainDir, "..", "data")
+	idFile := filepath.Join(dataDir, ".machine_id")
+	if data, err := os.ReadFile(idFile); err == nil && len(strings.TrimSpace(string(data))) >= 32 {
+		return strings.TrimSpace(string(data))
+	}
+	hostname, _ := os.Hostname()
+	raw := fmt.Sprintf("%s:%s:%s:%d", hostname, runtime.GOOS, runtime.GOARCH, time.Now().UnixNano())
+	h := sha256.Sum256([]byte(raw))
+	machineID := hex.EncodeToString(h[:])
+	_ = os.MkdirAll(dataDir, 0755)
+	_ = os.WriteFile(idFile, []byte(machineID), 0644)
+	return machineID
+}
+
+type TelemetryPingPayload struct {
+	MachineID  string `json:"machine_id"`
+	OS         string `json:"os"`
+	Arch       string `json:"arch"`
+	AppVersion string `json:"app_version"`
+	Build      int    `json:"build"`
+	Event      string `json:"event"`
+	Timestamp  string `json:"timestamp"`
+}
+
+// DispatchStartupTelemetry sends an anonymous ping to the Cloudflare Worker endpoint
+func DispatchStartupTelemetry(ver string, build int) {
+	if !isTelemetryEnabled() {
+		return
+	}
+	go func() {
+		endpoint := os.Getenv("TELEMETRY_ENDPOINT")
+		if endpoint == "" {
+			endpoint = DefaultTelemetryEndpoint
+		}
+		payload := TelemetryPingPayload{
+			MachineID:  getMachineID(),
+			OS:         runtime.GOOS,
+			Arch:       runtime.GOARCH,
+			AppVersion: ver,
+			Build:      build,
+			Event:      "server_start",
+			Timestamp:  time.Now().UTC().Format(time.RFC3339),
+		}
+		bodyBytes, err := json.Marshal(payload)
+		if err != nil {
+			return
+		}
+		client := &http.Client{Timeout: 3 * time.Second}
+		req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(bodyBytes))
+		if err != nil {
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("User-Agent", fmt.Sprintf("AntigravityServer/%s (Build %d)", ver, build))
+		resp, err := client.Do(req)
+		if err == nil && resp != nil {
+			_ = resp.Body.Close()
+		}
+	}()
+}
 
 func isTelemetryEnabled() bool {
 	envVal := strings.ToLower(strings.TrimSpace(os.Getenv("TELEMETRY_ENABLED")))

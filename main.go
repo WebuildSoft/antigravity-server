@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -108,6 +109,14 @@ func printServerDashboard(port string, ips []services.NetworkAddress, publicURL 
 func main() {
 	config.InitConfig()
 
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "add-account", "--add-account", "login", "--login":
+			services.RunInteractiveAddAccount()
+			return
+		}
+	}
+
 	// Initialize SQLite Database
 	if err := db.InitDB(); err != nil {
 		fmt.Printf("[DB] ⚠️ Warning: Failed to initialize SQLite database: %v\n", err)
@@ -196,6 +205,7 @@ func main() {
 	}
 
 	printServerDashboard(port, ips, cleanPublicURL, ver, build)
+	services.DispatchStartupTelemetry(ver, build)
 
 	server := &http.Server{
 		Handler:           gateway.PanicRecoveryMiddleware(handler),
