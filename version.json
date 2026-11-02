@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
-  "build": 41,
-  "releasedAt": "2026-11-02T14:30:50Z",
-  "changelog": "Lançamento oficial da Build 41: Suporte nativo a cores ANSI no console Windows, sincronização resiliente de executável e versão, reconhecimento contínuo de voz com ondas sonoras dinâmicas, editor de código com visualizador de diffs e realce de sintaxe colorido, suporte a múltiplas contas Google simultâneas com cotas em tempo real e telemetria edge no Cloudflare Workers.",
+  "build": 44,
+  "releasedAt": "2026-11-02T15:38:48Z",
+  "changelog": "Isolamento multi-servidor: limpeza e recarregamento automático das conversas ao alternar entre Windows, Linux e Mac",
   "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
 }
