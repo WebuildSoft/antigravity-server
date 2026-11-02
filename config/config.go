@@ -7,11 +7,16 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
+	"time"
 )
 
 type Config struct {
+	ServerID           string
+	MachineName        string
+	OS                 string
 	Port               string
 	FirebaseProjectID  string
 	AllowedEmails      []string
@@ -228,6 +233,25 @@ func detectAllowedEmails() []string {
 	return []string{"*"}
 }
 
+func getOrCreateServerID(rootDir string) string {
+	idFile := filepath.Join(rootDir, "data", "server_id")
+	if data, err := os.ReadFile(idFile); err == nil {
+		s := strings.TrimSpace(string(data))
+		if s != "" {
+			return s
+		}
+	}
+	hostname, _ := os.Hostname()
+	cleanHost := strings.ToLower(regexp.MustCompile(`[^a-zA-Z0-9_-]`).ReplaceAllString(hostname, ""))
+	if cleanHost == "" {
+		cleanHost = "server"
+	}
+	newID := fmt.Sprintf("%s-%s-%d", runtime.GOOS, cleanHost, time.Now().Unix()%100000)
+	_ = os.MkdirAll(filepath.Join(rootDir, "data"), 0755)
+	_ = os.WriteFile(idFile, []byte(newID), 0644)
+	return newID
+}
+
 func InitConfig() {
 	rootDir := findProjectRoot()
 	loadEnvFile(filepath.Join(rootDir, ".env"))
@@ -298,7 +322,16 @@ func InitConfig() {
 		telemetryEnabled = true
 	}
 
+	hostname, _ := os.Hostname()
+	if hostname == "" {
+		hostname = "Computador"
+	}
+	serverID := getOrCreateServerID(rootDir)
+
 	AppConfig = Config{
+		ServerID:           serverID,
+		MachineName:        hostname,
+		OS:                 runtime.GOOS,
 		Port:               port,
 		FirebaseProjectID:  fbProj,
 		AllowedEmails:      allowed,

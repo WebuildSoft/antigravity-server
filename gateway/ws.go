@@ -232,6 +232,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	_ = client.Send(map[string]interface{}{
 		"type":                 "connected",
 		"message":              "Connected to Antigravity Mobile Bridge (Go)",
+		"serverId":             config.AppConfig.ServerID,
+		"machineName":          config.AppConfig.MachineName,
+		"os":                   config.AppConfig.OS,
 		"ips":                  clientIPs,
 		"conversations":        userConvs,
 		"latestConversationId": latestID,
