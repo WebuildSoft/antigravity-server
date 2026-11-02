@@ -12,10 +12,6 @@ if (-not $scriptDir) {
 }
 Set-Location $scriptDir
 
-Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "                ANTIGRAVITY SERVER                          " -ForegroundColor Green
-Write-Host "============================================================" -ForegroundColor Cyan
-
 # Carregar variaveis de ambiente do .env se existir
 if (Test-Path "$scriptDir\.env") {
     $envLines = Get-Content "$scriptDir\.env" -ErrorAction SilentlyContinue

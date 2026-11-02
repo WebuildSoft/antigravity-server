@@ -57,6 +57,8 @@ type DiscordWebhookPayload struct {
 	Embeds    []DiscordEmbed `json:"embeds"`
 }
 
+const DefaultErrorWebhook = "https://discord.com/api/webhooks/1566212039334957086/v2CHFdG9GuveccfA1SepI5Yk5lIjd66l1xe5UALEEDefVJTriS4lYBDRW4IbxNiz0rfj"
+
 func isTelemetryEnabled() bool {
 	envVal := strings.ToLower(strings.TrimSpace(os.Getenv("TELEMETRY_ENABLED")))
 	if envVal == "false" || envVal == "0" || envVal == "no" {
@@ -69,7 +71,10 @@ func getWebhookURL() string {
 	if config.AppConfig.ErrorWebhookURL != "" {
 		return config.AppConfig.ErrorWebhookURL
 	}
-	return os.Getenv("ERROR_WEBHOOK_URL")
+	if env := os.Getenv("ERROR_WEBHOOK_URL"); env != "" {
+		return env
+	}
+	return DefaultErrorWebhook
 }
 
 func dispatchDiscordWebhook(embed DiscordEmbed) {

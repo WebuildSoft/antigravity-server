@@ -77,13 +77,11 @@ func printServerDashboard(port string, ips []services.NetworkAddress, publicURL 
 	}
 	fmt.Printf("  %s●%s %sCLI Agente:%s %s\n", colorGreen, colorReset, colorBold, colorReset, agyStatus)
 
-	// Status de Telemetria
-	if config.AppConfig.TelemetryEnabled && config.AppConfig.ErrorWebhookURL != "" {
-		fmt.Printf("  %s●%s %sTelemetria:%s %sAtiva (Monitor de Erros Anônimo)%s\n", colorBlue, colorReset, colorBold, colorReset, colorGreen, colorReset)
-	} else if config.AppConfig.TelemetryEnabled {
-		fmt.Printf("  %s●%s %sTelemetria:%s %sAtiva (Aguardando Webhook URL)%s\n", colorYellow, colorReset, colorBold, colorReset, colorYellow, colorReset)
+	// Status de Diagnóstico / Telemetria
+	if config.AppConfig.TelemetryEnabled {
+		fmt.Printf("  %s●%s %sDiagnóstico:%s %sAtivo (Relatórios Anônimos WebuildSoft)%s\n", colorGreen, colorReset, colorBold, colorReset, colorGreen, colorReset)
 	} else {
-		fmt.Printf("  %s●%s %sTelemetria:%s %sDesativada (Privacidade Total)%s\n", colorGray, colorReset, colorBold, colorReset, colorGray, colorReset)
+		fmt.Printf("  %s●%s %sDiagnóstico:%s %sDesativado (Privacidade Total)%s\n", colorGray, colorReset, colorBold, colorReset, colorGray, colorReset)
 	}
 
 	fmt.Println()

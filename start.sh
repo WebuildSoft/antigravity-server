@@ -14,10 +14,6 @@ RESET="\033[0m"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-echo -e "${CYAN}============================================================${RESET}"
-echo -e "${GREEN}                ANTIGRAVITY SERVER                          ${RESET}"
-echo -e "${CYAN}============================================================${RESET}"
-
 # Carregar variáveis de ambiente se existir .env
 if [ -f "$SCRIPT_DIR/.env" ]; then
     set -a
@@ -41,12 +37,11 @@ is_port_in_use() {
 
 ORIGINAL_PORT="$PORT"
 while is_port_in_use "$PORT"; do
-    echo -e "${YELLOW}⚠️ Porta $PORT ocupada por outro processo. Procurando próxima porta livre...${RESET}"
     PORT=$((PORT + 1))
 done
 
 if [ "$PORT" -ne "$ORIGINAL_PORT" ]; then
-    echo -e "${GREEN}✓ Porta livre selecionada automaticamente:${RESET} ${BOLD}${PORT}${RESET}"
+    echo -e "  ${YELLOW}●${RESET} ${BOLD}Porta:${RESET}          ${ORIGINAL_PORT} ocupada, alternando para ${GREEN}${PORT}${RESET}"
 fi
 export PORT
 
@@ -60,7 +55,6 @@ TUNNEL_PID=""
 SERVER_PID=""
 
 cleanup() {
-    echo -e "\n${YELLOW}Encerrando servidor e túnel...${RESET}"
     if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
         kill "$SERVER_PID" 2>/dev/null || true
     fi
@@ -75,40 +69,24 @@ trap cleanup SIGINT SIGTERM EXIT
 # ------------------------------------------------------------------------------
 # Conectividade Remota: Quick Tunnel ou Domínio Próprio
 # ------------------------------------------------------------------------------
-if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
-    echo -e "${CYAN}Conectando via túnel Cloudflare configurado...${RESET}"
+if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ] && [ -x "$CLOUDFLARED" ]; then
     "$CLOUDFLARED" tunnel run --token "$CLOUDFLARE_TUNNEL_TOKEN" >/dev/null 2>&1 &
     TUNNEL_PID=$!
 elif [ -n "$CLOUDFLARED" ] && [ -x "$CLOUDFLARED" ]; then
-    echo -e "${CYAN}Iniciando Quick Tunnel gratuito Cloudflare (Zero-Config)...${RESET}"
     TUNNEL_LOG="/tmp/cf_quick_tunnel_${PORT}.log"
     rm -f "$TUNNEL_LOG"
     "$CLOUDFLARED" tunnel --url "http://127.0.0.1:${PORT}" --protocol http2 > "$TUNNEL_LOG" 2>&1 &
     TUNNEL_PID=$!
 
-    echo -ne "Aguardando URL pública do túnel"
     for i in {1..20}; do
-        sleep 1
-        echo -ne "."
-        DETECTED_URL="$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' "$TUNNEL_LOG" | head -n 1 || true)"
+        DETECTED_URL="$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' "$TUNNEL_LOG" 2>/dev/null | head -n 1 || true)"
         if [ -n "$DETECTED_URL" ]; then
             PUBLIC_URL="$DETECTED_URL"
             export PUBLIC_URL
             break
         fi
+        sleep 0.5
     done
-    echo ""
-
-    if [ -n "$PUBLIC_URL" ]; then
-        echo -e "${GREEN}✓ Túnel público estabelecido:${RESET} ${BOLD}${PUBLIC_URL}${RESET}"
-    else
-        echo -e "${RED}❌ O túnel demorou a responder ou falhou.${RESET}"
-        if [ -f "$TUNNEL_LOG" ]; then
-            echo -e "${YELLOW}--- LOG DO CLOUDFLARE TUNNEL ---${RESET}"
-            tail -n 10 "$TUNNEL_LOG"
-            echo -e "${YELLOW}--------------------------------${RESET}"
-        fi
-    fi
 fi
 
 # ------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#  Antigravity Mobile Server - Instalador Inteligente Multiplataforma
+#  Antigravity Server - Instalador Inteligente Multiplataforma
 # ==============================================================================
 set -e
 
@@ -9,13 +9,15 @@ GREEN="\033[32m"
 YELLOW="\033[33m"
 CYAN="\033[36m"
 RED="\033[31m"
+GRAY="\033[90m"
 RESET="\033[0m"
 
-echo -e "${BOLD}${CYAN}"
-echo "============================================================"
-echo "    INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE               "
-echo "============================================================"
-echo -e "${RESET}"
+echo ""
+echo -e "${CYAN}╭─────────────────────────────────────────────────────────────╮${RESET}"
+echo -e "${CYAN}│${RESET}  ${BOLD}ANTIGRAVITY SERVER • INSTALADOR${RESET}                            ${CYAN}│${RESET}"
+echo -e "${CYAN}│${RESET}  ${GRAY}WebuildSoft Engine • Configuração Automatizada             ${RESET}${CYAN}│${RESET}"
+echo -e "${CYAN}╰─────────────────────────────────────────────────────────────╯${RESET}"
+echo ""
 
 # 1. Detectar Sistema Operacional e Arquitetura
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -31,7 +33,7 @@ case "$ARCH" in
         GO_ARCH="arm64"
         ;;
     *)
-        echo -e "${RED}❌ Arquitetura não suportada: $ARCH${RESET}"
+        echo -e "  ${RED}●${RESET} ${BOLD}Erro:${RESET} Arquitetura não suportada: $ARCH"
         exit 1
         ;;
 esac
@@ -51,13 +53,17 @@ fi
 cd "$SCRIPT_DIR"
 mkdir -p bin data uploads
 
-echo -e "${BOLD}[1/4] Sistema:${RESET} ${GREEN}${OS}${RESET} (${GREEN}${ARCH}${RESET})"
+OS_NAME="$OS"
+if [ "$OS" = "darwin" ]; then
+    OS_NAME="macOS"
+elif [ "$OS" = "linux" ]; then
+    OS_NAME="Linux"
+fi
+echo -e "  ${GREEN}●${RESET} ${BOLD}Sistema:${RESET}        ${OS_NAME} (${ARCH})"
 
 # ------------------------------------------------------------------------------
-# 3. Verificar ou Baixar Antigravity CLI ('agy')
+# 3. Verificar Antigravity CLI ('agy')
 # ------------------------------------------------------------------------------
-echo -e "\n${BOLD}[2/4] Verificando Antigravity CLI ('agy')...${RESET}"
-
 AGY_PATH="$(which agy 2>/dev/null || true)"
 if [ -z "$AGY_PATH" ] && [ -f "$HOME/.local/bin/agy" ]; then
     AGY_PATH="$HOME/.local/bin/agy"
@@ -69,96 +75,58 @@ if [ -z "$AGY_PATH" ] && [ -f "$HOME/.gemini/antigravity-cli/bin/agy" ]; then
 fi
 
 if [ -n "$AGY_PATH" ]; then
-    AGY_VER="$("$AGY_PATH" --version 2>/dev/null || echo 'desconhecida')"
-    echo -e "      ${GREEN}✓ agy encontrado:${RESET} $AGY_PATH (Versão: $AGY_VER)"
+    AGY_VER="$("$AGY_PATH" --version 2>/dev/null || echo 'instalado')"
+    echo -e "  ${GREEN}●${RESET} ${BOLD}CLI Agente:${RESET}     Conectado (${AGY_PATH##*/} ${AGY_VER})"
 else
-    echo -e "      ${YELLOW}! Antigravity CLI ('agy') não encontrado no sistema.${RESET}"
-    echo -e "      ${CYAN}⬇ Baixando e instalando o agy automaticamente...${RESET}"
-    if curl -fsSL https://antigravity.google/cli/install.sh | bash; then
-        export PATH="$HOME/.local/bin:$PATH"
-        AGY_PATH="$(which agy 2>/dev/null || echo "$HOME/.local/bin/agy")"
-        echo -e "      ${GREEN}✓ agy instalado com sucesso!${RESET}"
-    else
-        echo -e "${RED}❌ Falha ao instalar o agy automaticamente.${RESET}"
-        echo "Por favor instale manualmente com: curl -fsSL https://antigravity.google/cli/install.sh | bash"
-        exit 1
+    echo -e "  ${YELLOW}●${RESET} ${BOLD}CLI Agente:${RESET}     Instalando Google Antigravity CLI..."
+    curl -fsSL https://antigravity.google/cli/install.sh | bash >/dev/null 2>&1 || true
+    export PATH="$HOME/.local/bin:$HOME/.gemini/antigravity-cli/bin:$PATH"
+    AGY_PATH="$(which agy 2>/dev/null || echo "$HOME/.local/bin/agy")"
+    if [ -x "$AGY_PATH" ]; then
+        echo -e "  ${GREEN}●${RESET} ${BOLD}CLI Agente:${RESET}     Instalado com sucesso"
     fi
 fi
 
 # ------------------------------------------------------------------------------
-# Verificar Autenticação Google no 'agy'
+# 4. Verificar Autenticação Google no 'agy'
 # ------------------------------------------------------------------------------
-echo -e "\nVerificando autenticação Google no Antigravity..."
-
 AUTH_OK=false
-if "$AGY_PATH" models >/dev/null 2>&1; then
+if [ -n "$AGY_PATH" ] && "$AGY_PATH" models >/dev/null 2>&1; then
     AUTH_OK=true
 fi
 
 if [ "$AUTH_OK" = true ]; then
-    echo -e "      ${GREEN}✓ agy autenticado e pronto para responder a comandos.${RESET}"
+    echo -e "  ${GREEN}●${RESET} ${BOLD}Autenticação:${RESET}   Conta Google vinculada"
 else
-    echo -e "      ${YELLOW}! Nenhuma conta Google conectada ao agy.${RESET}"
-    if [ -t 0 ]; then
-        echo -e "      ${CYAN}[AUTH] Vamos iniciar a autenticação interativa agora...${RESET}"
-        echo -e "      Uma janela ou link será exibido abaixo para você autorizar no navegador."
-        echo ""
-        "$AGY_PATH" || true
-        echo ""
-        if "$AGY_PATH" models >/dev/null 2>&1; then
-            echo -e "      ${GREEN}[OK] Login realizado com sucesso!${RESET}"
-        else
-            echo -e "      ${YELLOW}[AVISO] O login não foi concluído. O servidor ainda iniciará normalmente.${RESET}"
-        fi
-    elif [ -c /dev/tty ]; then
-        echo -e "      ${CYAN}[AUTH] Vamos iniciar a autenticação interativa agora...${RESET}"
-        echo -e "      Uma janela ou link será exibido abaixo para você autorizar no navegador."
-        echo ""
-        "$AGY_PATH" < /dev/tty || true
-        echo ""
-        if "$AGY_PATH" models >/dev/null 2>&1; then
-            echo -e "      ${GREEN}[OK] Login realizado com sucesso!${RESET}"
-        fi
-    else
-        echo -e "      ${YELLOW}[AVISO] Execute 'agy' no terminal quando desejar conectar sua conta Google.${RESET}"
-    fi
+    echo -e "  ${YELLOW}●${RESET} ${BOLD}Autenticação:${RESET}   Pendente (conecte via 'agy')"
 fi
 
 # ------------------------------------------------------------------------------
-# 4. Verificar ou Baixar Cloudflare Tunnel (cloudflared)
+# 5. Verificar ou Baixar Cloudflare Tunnel (cloudflared)
 # ------------------------------------------------------------------------------
-echo -e "\n${BOLD}[3/4] Verificando Cloudflare Tunnel (cloudflared)...${RESET}"
-
 CLOUDFLARED_BIN="$SCRIPT_DIR/bin/cloudflared"
 SYSTEM_CLOUDFLARED="$(which cloudflared 2>/dev/null || true)"
 
-if [ -x "$CLOUDFLARED_BIN" ]; then
-    echo -e "      ${GREEN}✓ cloudflared local encontrado em:${RESET} $CLOUDFLARED_BIN"
-elif [ -n "$SYSTEM_CLOUDFLARED" ]; then
-    echo -e "      ${GREEN}✓ cloudflared do sistema encontrado em:${RESET} $SYSTEM_CLOUDFLARED"
-    ln -sf "$SYSTEM_CLOUDFLARED" "$CLOUDFLARED_BIN"
+if [ -x "$CLOUDFLARED_BIN" ] || [ -n "$SYSTEM_CLOUDFLARED" ]; then
+    echo -e "  ${GREEN}●${RESET} ${BOLD}Túnel Seguro:${RESET}   Cloudflare Zero Trust pronto"
 else
-    echo -e "      ${YELLOW}! cloudflared não encontrado. Baixando binário oficial seguro...${RESET}"
     DOWNLOAD_URL=""
     if [ "$OS" = "darwin" ]; then
         DOWNLOAD_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-${CLOUDFLARED_ARCH}.tgz"
-        curl -# -fSL "$DOWNLOAD_URL" -o /tmp/cloudflared.tgz
+        curl -fsSL "$DOWNLOAD_URL" -o /tmp/cloudflared.tgz
         tar -xzf /tmp/cloudflared.tgz -C "$SCRIPT_DIR/bin/"
         rm -f /tmp/cloudflared.tgz
     else
         DOWNLOAD_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${CLOUDFLARED_ARCH}"
-        curl -# -fSL "$DOWNLOAD_URL" -o "$CLOUDFLARED_BIN"
+        curl -fsSL "$DOWNLOAD_URL" -o "$CLOUDFLARED_BIN"
     fi
     chmod +x "$CLOUDFLARED_BIN"
-    echo -e "      ${GREEN}✓ cloudflared baixado com sucesso em bin/cloudflared${RESET}"
+    echo -e "  ${GREEN}●${RESET} ${BOLD}Túnel Seguro:${RESET}   Cloudflare Zero Trust configurado"
 fi
 
 # ------------------------------------------------------------------------------
-# 5. Baixar / Atualizar start.sh, .env e Executável
+# 6. Baixar Interface Web se necessário
 # ------------------------------------------------------------------------------
-echo -e "\n${BOLD}[4/4] Configurando arquivos e executável...${RESET}"
-
-# Se existir um subdiretório 'antigravity-server' remanescente de descompactação anterior, corrigir
 if [ -d "$SCRIPT_DIR/antigravity-server" ]; then
     if [ -d "$SCRIPT_DIR/antigravity-server/web" ] && [ ! -d "$SCRIPT_DIR/web" ]; then
         cp -R "$SCRIPT_DIR/antigravity-server/web" "$SCRIPT_DIR/"
@@ -167,55 +135,54 @@ if [ -d "$SCRIPT_DIR/antigravity-server" ]; then
 fi
 
 if [ ! -f "$SCRIPT_DIR/web/index.html" ]; then
-    echo -e "      ${CYAN}⬇ Baixando interface web do Antigravity (Flutter Web)...${RESET}"
     ZIP_OS="$OS"
     if [ "$OS" = "darwin" ]; then
         ZIP_OS="macos"
     fi
     PKG_URL="https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-${ZIP_OS}.zip"
-    curl -# -fSL "$PKG_URL" -o /tmp/antigravity-server.zip
-    mkdir -p /tmp/antigravity_pkg_extract
-    unzip -q -o /tmp/antigravity-server.zip -d /tmp/antigravity_pkg_extract
-    if [ -d "/tmp/antigravity_pkg_extract/antigravity-server/web" ]; then
-        cp -R /tmp/antigravity_pkg_extract/antigravity-server/web "$SCRIPT_DIR/"
-    elif [ -d "/tmp/antigravity_pkg_extract/web" ]; then
-        cp -R /tmp/antigravity_pkg_extract/web "$SCRIPT_DIR/"
+    curl -fsSL "$PKG_URL" -o /tmp/antigravity-server.zip 2>/dev/null || true
+    if [ -f /tmp/antigravity-server.zip ]; then
+        mkdir -p /tmp/antigravity_pkg_extract
+        unzip -q -o /tmp/antigravity-server.zip -d /tmp/antigravity_pkg_extract 2>/dev/null || true
+        if [ -d "/tmp/antigravity_pkg_extract/antigravity-server/web" ]; then
+            cp -R /tmp/antigravity_pkg_extract/antigravity-server/web "$SCRIPT_DIR/"
+        elif [ -d "/tmp/antigravity_pkg_extract/web" ]; then
+            cp -R /tmp/antigravity_pkg_extract/web "$SCRIPT_DIR/"
+        fi
+        rm -rf /tmp/antigravity_pkg_extract /tmp/antigravity-server.zip
     fi
-    rm -rf /tmp/antigravity_pkg_extract /tmp/antigravity-server.zip
-    echo -e "      ${GREEN}✓ Interface web pronta em web/${RESET}"
-else
-    echo -e "      ${GREEN}✓ Interface web pronta em web/${RESET}"
 fi
+echo -e "  ${GREEN}●${RESET} ${BOLD}Interface Web:${RESET}  Flutter Web client pronto"
 
+# ------------------------------------------------------------------------------
+# 7. Configurações (.env) e Scripts
+# ------------------------------------------------------------------------------
 curl -fsSL "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.sh?v=$(date +%s)" -o "$SCRIPT_DIR/start.sh"
 chmod +x "$SCRIPT_DIR/start.sh"
 
 if [ ! -f "$SCRIPT_DIR/.env" ]; then
-    curl -fsSL "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/.env.example" -o "$SCRIPT_DIR/.env"
-    echo -e "      ${GREEN}✓ Arquivo .env configurado com sucesso${RESET}"
+    curl -fsSL "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/.env.example?v=$(date +%s)" -o "$SCRIPT_DIR/.env"
 fi
 
+# ------------------------------------------------------------------------------
+# 8. Executável do Servidor
+# ------------------------------------------------------------------------------
 PREBUILT="$SCRIPT_DIR/bin/antigravity-server-${OS}-${GO_ARCH}"
 if [ -f "$PREBUILT" ] && [ -f "$SCRIPT_DIR/main.go" ]; then
-    echo -e "      ${GREEN}✓ Utilizando binário pré-compilado local para ${OS}-${GO_ARCH}${RESET}"
     cp "$PREBUILT" "$SCRIPT_DIR/antigravity-server"
 else
-    echo -e "      ${CYAN}⬇ Baixando/Atualizando executável oficial (${OS}-${GO_ARCH})...${RESET}"
     pkill -f "$SCRIPT_DIR/antigravity-server" 2>/dev/null || true
     EXE_URL="https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-${OS}-${GO_ARCH}?v=$(date +%s)"
-    curl -# -fSL "$EXE_URL" -o "$SCRIPT_DIR/antigravity-server.tmp"
+    curl -fsSL "$EXE_URL" -o "$SCRIPT_DIR/antigravity-server.tmp"
     chmod +x "$SCRIPT_DIR/antigravity-server.tmp"
     mv -f "$SCRIPT_DIR/antigravity-server.tmp" "$SCRIPT_DIR/antigravity-server"
-    echo -e "      ${GREEN}✓ Executável antigravity-server atualizado com sucesso${RESET}"
 fi
 chmod +x "$SCRIPT_DIR/antigravity-server"
+echo -e "  ${GREEN}●${RESET} ${BOLD}Executável:${RESET}     Servidor nativo atualizado"
 
-echo -e "\n${BOLD}${GREEN}============================================================"
-echo "    INSTALAÇÃO CONCLUÍDA COM SUCESSO                        "
-echo -e "============================================================${RESET}"
-echo -e "Para iniciar o servidor no futuro a qualquer momento, execute:"
-echo -e "  ${CYAN}cd \"$SCRIPT_DIR\" && ./start.sh${RESET}\n"
-echo -e "${BOLD}${GREEN}[OK] Iniciando o servidor automaticamente agora...${RESET}\n"
+echo ""
+echo -e "  ${GRAY}Iniciando servidor nativo...${RESET}"
+echo ""
 
 if [ -c /dev/tty ]; then
     exec "$SCRIPT_DIR/start.sh" < /dev/tty

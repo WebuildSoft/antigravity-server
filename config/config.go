@@ -119,15 +119,15 @@ func PromptTelemetryConsent(rootDir string) bool {
 
 	fmt.Println()
 	fmt.Println("\033[36m╭─────────────────────────────────────────────────────────────╮\033[0m")
-	fmt.Println("\033[36m│\033[0m  \033[1mTELEMETRIA & PRIVACIDADE • ANTIGRAVITY SERVER\033[0m              \033[36m│\033[0m")
+	fmt.Println("\033[36m│\033[0m  \033[1mDIAGNÓSTICO & PRIVACIDADE • ANTIGRAVITY SERVER\033[0m             \033[36m│\033[0m")
 	fmt.Println("\033[36m│\033[0m                                                             \033[36m│\033[0m")
-	fmt.Println("\033[36m│\033[0m  Deseja autorizar o envio anônimo de relatórios de falha    \033[36m│\033[0m")
-	fmt.Println("\033[36m│\033[0m  para nos ajudar a melhorar a estabilidade do servidor?     \033[36m│\033[0m")
+	fmt.Println("\033[36m│\033[0m  Autoriza o envio de relatórios de falha anônimos para      \033[36m│\033[0m")
+	fmt.Println("\033[36m│\033[0m  aprimoramento contínuo da estabilidade do sistema?         \033[36m│\033[0m")
 	fmt.Println("\033[36m│\033[0m                                                             \033[36m│\033[0m")
-	fmt.Println("\033[36m│\033[0m  \033[90m• 100% Anônimo: Código, conversas e tokens são protegidos  \033[36m│\033[0m")
-	fmt.Println("\033[36m│\033[0m  \033[90m• Você pode alterar sua escolha a qualquer momento no .env \033[36m│\033[0m")
+	fmt.Println("\033[36m│\033[0m  \033[90m• 100% Seguro: Dados, conversas e tokens nunca são lidos   \033[36m│\033[0m")
+	fmt.Println("\033[36m│\033[0m  \033[90m• Configurável a qualquer momento no arquivo .env          \033[36m│\033[0m")
 	fmt.Println("\033[36m╰─────────────────────────────────────────────────────────────╯\033[0m")
-	fmt.Print("Ativar envio de relatórios de erro anônimos? [s/N]: ")
+	fmt.Print("  Ativar relatórios de diagnóstico anônimos? [s/N]: ")
 
 	reader := bufio.NewReader(termReader)
 	input, _ := reader.ReadString('\n')
@@ -135,11 +135,11 @@ func PromptTelemetryConsent(rootDir string) bool {
 
 	enabled := input == "s" || input == "sim" || input == "y" || input == "yes"
 	if enabled {
-		fmt.Println("\033[32m[OK] Telemetria anônima ativada. Obrigado por contribuir!\033[0m")
+		fmt.Println("  \033[32m[OK] Diagnóstico anônimo ativado. Obrigado por contribuir!\033[0m")
 		_ = SaveEnvVar(rootDir, "TELEMETRY_ENABLED", "true")
 		_ = os.Setenv("TELEMETRY_ENABLED", "true")
 	} else {
-		fmt.Println("\033[90m[OK] Telemetria desativada. Nenhuma informação será enviada.\033[0m")
+		fmt.Println("  \033[90m[OK] Diagnóstico desativado. Privacidade total mantida.\033[0m")
 		_ = SaveEnvVar(rootDir, "TELEMETRY_ENABLED", "false")
 		_ = os.Setenv("TELEMETRY_ENABLED", "false")
 	}

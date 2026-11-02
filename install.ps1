@@ -6,9 +6,12 @@ try { [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityP
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "   INSTALADOR DO SERVIDOR ANTIGRAVITY MOBILE v1.4.0 (WIN)   " -ForegroundColor Cyan
-Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "╭─────────────────────────────────────────────────────────────╮" -ForegroundColor Cyan
+Write-Host "│  ANTIGRAVITY SERVER • INSTALADOR (WINDOWS)                  │" -ForegroundColor Cyan
+Write-Host "│  WebuildSoft Engine • Configuracao Automatizada             │" -ForegroundColor DarkGray
+Write-Host "╰─────────────────────────────────────────────────────────────╯" -ForegroundColor Cyan
+Write-Host ""
 
 # 1. Definir diretorio de instalacao
 $scriptDir = $PSScriptRoot
@@ -165,7 +168,7 @@ if (-not (Test-Path "$scriptDir\web\index.html")) {
     $pkgExtract = Join-Path $env:TEMP "antigravity_pkg_extract"
     if (Test-Path $pkgExtract) { Remove-Item -Path $pkgExtract -Recurse -Force -ErrorAction SilentlyContinue }
     if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-        curl.exe -# -fSL "$pkgUrl" -o "$pkgZip"
+        curl.exe -fsSL "$pkgUrl" -o "$pkgZip"
     } else {
         Invoke-WebRequest -Uri $pkgUrl -OutFile $pkgZip -UseBasicParsing
     }
@@ -182,8 +185,8 @@ if (-not (Test-Path "$scriptDir\web\index.html")) {
 }
 
 if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-    curl.exe -# -fSL "$startPs1Url" -o "$scriptDir\start.ps1"
-    curl.exe -# -fSL "$startBatUrl" -o "$scriptDir\start.bat"
+    curl.exe -fsSL "$startPs1Url" -o "$scriptDir\start.ps1"
+    curl.exe -fsSL "$startBatUrl" -o "$scriptDir\start.bat"
 } else {
     Invoke-WebRequest -Uri $startPs1Url -OutFile "$scriptDir\start.ps1" -UseBasicParsing
     Invoke-WebRequest -Uri $startBatUrl -OutFile "$scriptDir\start.bat" -UseBasicParsing
@@ -210,7 +213,7 @@ if ((Test-Path $prebuilt) -and (Test-Path "$scriptDir\main.go")) {
 } else {
     $repoExeUrlCacheBust = "$repoExeUrl?v=" + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-        curl.exe -# -fSL "$repoExeUrlCacheBust" -o "$serverExe"
+        curl.exe -fsSL "$repoExeUrlCacheBust" -o "$serverExe"
     } else {
         Invoke-WebRequest -Uri $repoExeUrlCacheBust -OutFile $serverExe -UseBasicParsing
     }
@@ -218,12 +221,7 @@ if ((Test-Path $prebuilt) -and (Test-Path "$scriptDir\main.go")) {
 Unblock-File -Path "$serverExe" -ErrorAction SilentlyContinue
 Write-Host "      [OK] Executavel antigravity-server.exe atualizado com sucesso" -ForegroundColor Green
 
-Write-Host "`n============================================================" -ForegroundColor Green
-Write-Host "    INSTALACAO NO WINDOWS CONCLUIDA COM SUCESSO!            " -ForegroundColor Green
-Write-Host "============================================================" -ForegroundColor Green
-Write-Host "Para iniciar o servidor no futuro a qualquer momento, execute:"
-Write-Host "  cd `"$scriptDir`"; powershell -ExecutionPolicy Bypass -File .\start.ps1" -ForegroundColor Cyan
-Write-Host "  (ou de dois cliques em start.bat)`n" -ForegroundColor Cyan
+Write-Host ""
 Write-Host "Iniciando o servidor automaticamente agora...`n" -ForegroundColor Green
 
 # Iniciar o servidor
