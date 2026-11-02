@@ -134,6 +134,98 @@ func copyFile(src, dst string) error {
 	return out.Sync()
 }
 
+func syncOSKeyring(targetEmail, credsPath string) error {
+	b, err := os.ReadFile(credsPath)
+	if err != nil {
+		return fmt.Errorf("falha ao ler credenciais: %v", err)
+	}
+
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return fmt.Errorf("falha ao interpretar JSON: %v", err)
+	}
+
+	accessToken, _ := raw["access_token"].(string)
+	refreshToken, _ := raw["refresh_token"].(string)
+	tokenType, _ := raw["token_type"].(string)
+	if tokenType == "" {
+		tokenType = "Bearer"
+	}
+
+	expiresIn := 3599
+	if exp, ok := raw["expires_in"].(float64); ok && exp > 0 {
+		expiresIn = int(exp)
+	}
+
+	expiryStr := time.Now().Add(time.Duration(expiresIn) * time.Second).Format("2006-01-02T15:04:05.999999999-07:00")
+
+	type TokenInfo struct {
+		AccessToken  string `json:"access_token"`
+		TokenType    string `json:"token_type"`
+		RefreshToken string `json:"refresh_token"`
+		Expiry       string `json:"expiry"`
+		ExpiresIn    int    `json:"expires_in"`
+	}
+
+	payload := struct {
+		Token        TokenInfo `json:"token"`
+		AuthMethod   string    `json:"auth_method"`
+		IDTokenEmail string    `json:"id_token_email"`
+	}{
+		Token: TokenInfo{
+			AccessToken:  accessToken,
+			TokenType:    tokenType,
+			RefreshToken: refreshToken,
+			Expiry:       expiryStr,
+			ExpiresIn:    expiresIn,
+		},
+		AuthMethod:   "consumer",
+		IDTokenEmail: targetEmail,
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	b64Val := base64.StdEncoding.EncodeToString(payloadBytes)
+	keyringVal := "go-keyring-base64:" + b64Val
+
+	switch runtime.GOOS {
+	case "darwin":
+		cmd := exec.Command("/usr/bin/security", "add-generic-password",
+			"-a", "antigravity",
+			"-s", "gemini",
+			"-w", keyringVal,
+			"-U",
+		)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			fmt.Printf("[Accounts] ⚠️ Aviso ao gravar no macOS Keychain: %v (%s)\n", err, string(out))
+			return err
+		}
+		fmt.Printf("[Accounts] 🔑 macOS Keychain atualizado com sucesso para: %s\n", targetEmail)
+
+	case "windows":
+		cmd := exec.Command("cmdkey", "/generic:gemini/antigravity", "/user:antigravity", "/pass:"+keyringVal)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			fmt.Printf("[Accounts] ⚠️ Aviso ao gravar no Windows Credential Manager: %v (%s)\n", err, string(out))
+			return err
+		}
+		fmt.Printf("[Accounts] 🔑 Windows Credential Manager atualizado com sucesso para: %s\n", targetEmail)
+
+	case "linux":
+		cmd := exec.Command("secret-tool", "store", "--label=Antigravity", "service", "gemini", "username", "antigravity")
+		cmd.Stdin = strings.NewReader(keyringVal)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			fmt.Printf("[Accounts] ⚠️ Aviso ao gravar no Secret Service Linux: %v (%s)\n", err, string(out))
+		} else {
+			fmt.Printf("[Accounts] 🔑 Linux Secret Service atualizado para: %s\n", targetEmail)
+		}
+	}
+
+	return nil
+}
+
 func getActiveGoogleAccountEmail() string {
 	geminiDir := getGeminiDir()
 	accountsFile := filepath.Join(geminiDir, "google_accounts.json")
@@ -296,6 +388,11 @@ func SwitchAccount(targetEmail string) (*AccountProfile, error) {
 	// Copy target credentials to active oauth_creds.json
 	if err := copyFile(targetCreds, activeCreds); err != nil {
 		return nil, fmt.Errorf("falha ao ativar credenciais: %v", err)
+	}
+
+	// Sincroniza o Keyring nativo do Sistema Operacional (macOS Keychain, Windows Credential Manager, Linux)
+	if err := syncOSKeyring(targetEmail, targetCreds); err != nil {
+		fmt.Printf("[Accounts] ⚠️ Falha ao sincronizar OS Keyring: %v\n", err)
 	}
 
 	// Update google_accounts.json

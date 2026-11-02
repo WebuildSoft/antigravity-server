@@ -95,12 +95,23 @@ func fetchQuotaFromAgy() (*QuotaResponse, error) {
 			}
 		}
 
-		if len(parts) >= 4 {
+		if len(parts) >= 3 {
 			model := strings.TrimSpace(parts[0])
 			limitType := strings.TrimSpace(parts[1])
-			pctStr := strings.TrimSuffix(strings.TrimSpace(parts[2]), "%")
-			remaining, _ := strconv.Atoi(pctStr)
-			resetsAt := strings.TrimSpace(parts[3])
+			pctRaw := strings.TrimSpace(parts[2])
+			remaining := 0
+			resetsAt := "-"
+
+			if strings.EqualFold(pctRaw, "disabled") {
+				resetsAt = "Desativado"
+			} else {
+				pctStr := strings.TrimSuffix(pctRaw, "%")
+				remaining, _ = strconv.Atoi(pctStr)
+			}
+
+			if len(parts) >= 4 {
+				resetsAt = strings.TrimSpace(parts[3])
+			}
 
 			items = append(items, QuotaItem{
 				Model:     model,
