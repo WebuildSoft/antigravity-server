@@ -29,11 +29,15 @@ var (
 
 func ListConversationsForUser(userID string) []ConversationItem {
 	if userID == "" {
-		return ListConversations()
+		convs := ListConversations()
+		if convs == nil {
+			return []ConversationItem{}
+		}
+		return convs
 	}
 	dbConvs, err := db.ListConversationsFromDB(userID)
-	if err == nil {
-		var list []ConversationItem
+	if err == nil && len(dbConvs) > 0 {
+		list := make([]ConversationItem, 0, len(dbConvs))
 		for _, c := range dbConvs {
 			list = append(list, ConversationItem{
 				ID:        c.ID,
@@ -44,7 +48,15 @@ func ListConversationsForUser(userID string) []ConversationItem {
 		}
 		return list
 	}
-	return []ConversationItem{}
+
+	// Fallback: If no sessions are tagged specifically with this user's email yet,
+	// return all local conversations on this server. This guarantees that local sessions
+	// on Windows/Mac are immediately listed instead of returning an empty or null list!
+	allConvs := ListConversations()
+	if allConvs == nil {
+		return []ConversationItem{}
+	}
+	return allConvs
 }
 
 func ListConversations() []ConversationItem {

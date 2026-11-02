@@ -190,6 +190,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("  \033[36m[WS]\033[0m %s Cliente conectado de %s (Auth: %s)\n", time.Now().Format("15:04:05"), clientIP, authDisplay)
 
 	userConvs := services.ListConversationsForUser(userEmail)
+	if userConvs == nil {
+		userConvs = []services.ConversationItem{}
+	}
 
 	// Attach to latest session for this user initially
 	latestID := ""

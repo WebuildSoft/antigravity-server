@@ -88,10 +88,15 @@ function Cleanup {
 }
 
 # ------------------------------------------------------------------------------
-# Conectividade Remota: Quick Tunnel Cloudflare
+# Conectividade Remota: Quick Tunnel Cloudflare ou Tunel Preexistente
 # ------------------------------------------------------------------------------
-$publicUrl = $null
-if (Test-Path $cfBin) {
+$publicUrl = $env:PUBLIC_URL
+if ($publicUrl) {
+    Write-Host "[OK] Utilizando URL publica pre-configurada: " -ForegroundColor Green -NoNewline
+    Write-Host $publicUrl -ForegroundColor Cyan
+} elseif ($env:DISABLE_TUNNEL -eq "true" -or $env:DISABLE_TUNNEL -eq "1") {
+    Write-Host "[INFO] Tunel desativado via configuracao (DISABLE_TUNNEL)." -ForegroundColor Yellow
+} elseif (Test-Path $cfBin) {
     $tunnelLog = Join-Path $env:TEMP "cf_quick_tunnel_$port.log"
     if (Test-Path $tunnelLog) {
         Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue
@@ -101,11 +106,14 @@ if (Test-Path $cfBin) {
         $pinfo = New-Object System.Diagnostics.ProcessStartInfo
         $pinfo.FileName = $cfBin
         if ($env:CLOUDFLARE_TUNNEL_TOKEN) {
-            Write-Host "Conectando via tunel Cloudflare configurado..." -ForegroundColor Cyan
+            Write-Host "Conectando via tunel Cloudflare configurado (Token)..." -ForegroundColor Cyan
             $pinfo.Arguments = "tunnel --protocol http2 run --token `"$($env:CLOUDFLARE_TUNNEL_TOKEN)`""
+        } elseif ($env:CLOUDFLARE_CONFIG -and (Test-Path $env:CLOUDFLARE_CONFIG)) {
+            Write-Host "Conectando via arquivo de configuracao Cloudflare preexistente..." -ForegroundColor Cyan
+            $pinfo.Arguments = "tunnel --config `"$($env:CLOUDFLARE_CONFIG)`" run"
         } else {
             Write-Host "Iniciando Quick Tunnel Cloudflare (Zero-Config)..." -ForegroundColor Cyan
-            $pinfo.Arguments = "tunnel --url http://127.0.0.1:$port --protocol http2 --logfile `"$tunnelLog`""
+            $pinfo.Arguments = "tunnel --no-autoupdate --url http://127.0.0.1:$port --protocol http2 --logfile `"$tunnelLog`""
         }
         $pinfo.UseShellExecute = $false
         $pinfo.CreateNoWindow = $true

@@ -69,13 +69,17 @@ trap cleanup SIGINT SIGTERM EXIT
 # ------------------------------------------------------------------------------
 # Conectividade Remota: Quick Tunnel ou Domínio Próprio
 # ------------------------------------------------------------------------------
-if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ] && [ -x "$CLOUDFLARED" ]; then
+if [ -n "$PUBLIC_URL" ]; then
+    echo -e "${GREEN}[OK] Utilizando URL pública pré-configurada:${RESET} ${CYAN}${PUBLIC_URL}${RESET}"
+elif [ "$DISABLE_TUNNEL" = "true" ] || [ "$DISABLE_TUNNEL" = "1" ]; then
+    echo -e "${YELLOW}[INFO] Túnel desativado via configuração (DISABLE_TUNNEL).${RESET}"
+elif [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ] && [ -x "$CLOUDFLARED" ]; then
     "$CLOUDFLARED" tunnel run --token "$CLOUDFLARE_TUNNEL_TOKEN" >/dev/null 2>&1 &
     TUNNEL_PID=$!
 elif [ -n "$CLOUDFLARED" ] && [ -x "$CLOUDFLARED" ]; then
     TUNNEL_LOG="/tmp/cf_quick_tunnel_${PORT}.log"
     rm -f "$TUNNEL_LOG"
-    "$CLOUDFLARED" tunnel --url "http://127.0.0.1:${PORT}" --protocol http2 > "$TUNNEL_LOG" 2>&1 &
+    "$CLOUDFLARED" tunnel --no-autoupdate --url "http://127.0.0.1:${PORT}" --protocol http2 > "$TUNNEL_LOG" 2>&1 &
     TUNNEL_PID=$!
 
     for i in {1..20}; do

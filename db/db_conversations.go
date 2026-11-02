@@ -50,11 +50,17 @@ func ListConversationsFromDB(userID string) ([]ConversationRecord, error) {
 		query := `
 		SELECT id, title, created_at, updated_at
 		FROM conversations
-		WHERE user_id = ?
+		WHERE user_id = ? OR user_id = 'user@antigravity' OR user_id = ''
 		ORDER BY updated_at DESC
 		LIMIT 50
 		`
 		rows, err = DB.Query(query, userID)
+		// Retroactively associate legacy or default sessions with this user
+		go func(uid string) {
+			if DB != nil {
+				_, _ = DB.Exec("UPDATE conversations SET user_id = ? WHERE user_id = 'user@antigravity' OR user_id = ''", uid)
+			}
+		}(userID)
 	} else {
 		query := `
 		SELECT id, title, created_at, updated_at

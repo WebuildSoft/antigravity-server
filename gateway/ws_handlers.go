@@ -112,9 +112,13 @@ func (c *ClientConn) handleGetConversations() {
 	if c.authUser != nil {
 		uEmail = c.authUser.Email
 	}
+	convs := services.ListConversationsForUser(uEmail)
+	if convs == nil {
+		convs = []services.ConversationItem{}
+	}
 	_ = c.Send(map[string]interface{}{
 		"type":          "conversations_list",
-		"conversations": services.ListConversationsForUser(uEmail),
+		"conversations": convs,
 	})
 }
 
