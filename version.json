@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
   "build": 40,
-  "releasedAt": "2026-11-02T13:34:20Z",
-  "changelog": "Ativar telemetria anônima padrão de mercado com opt-out e Safe-Download nativo",
+  "releasedAt": "2026-11-02T13:41:55Z",
+  "changelog": "Sincronização oficial de pacotes versionados ZIP e APK para Build 40",
   "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
 }
