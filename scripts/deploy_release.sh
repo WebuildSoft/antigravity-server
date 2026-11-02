@@ -49,7 +49,17 @@ while [[ "$#" -gt 0 ]]; do
     --changelog|-c) CHANGELOG_MSG="$2"; shift ;;
     --build-apk) DO_BUILD_APK=true ;;
     --skip-push) SKIP_PUSH=true ;;
-    *) echo -e "  ${YELLOW}●${RESET} Parâmetro ignorado: $1" ;;
+    *)
+      if [ -z "$TARGET_VERSION" ]; then
+        TARGET_VERSION="$1"
+      elif [ -z "$TARGET_BUILD" ]; then
+        TARGET_BUILD="$1"
+      elif [ -z "$CHANGELOG_MSG" ]; then
+        CHANGELOG_MSG="$1"
+      else
+        echo -e "  ${YELLOW}●${RESET} Parâmetro ignorado: $1"
+      fi
+      ;;
   esac
   shift
 done
@@ -210,14 +220,6 @@ echo -e "  ${GREEN}●${RESET} Windows ZIP: ${WIN_SIZE} | macOS ZIP: ${MAC_SIZE}
 # 9. Atualização da Documentação Oficial (README & RELEASE_NOTES)
 # ------------------------------------------------------------------------------
 cat <<EOF > "$RELEASES_REPO/RELEASE_NOTES.md"
-# ==============================================================================
-# CAMPO 1: RELEASE TITLE (Copie e cole no campo "Release title" do GitHub)
-# ==============================================================================
-Antigravity Mobile & Server v${TARGET_VERSION} (Build #${TARGET_BUILD}) - Multi-Contas Google, Diffs Inteligentes e Telemetria Edge
-
-# ==============================================================================
-# CAMPO 2: DESCRIBE THIS RELEASE (Copie e cole no campo "Describe this release")
-# ==============================================================================
 ## Novidades da Versão v${TARGET_VERSION} (Build #${TARGET_BUILD})
 
 ${CHANGELOG_MSG}

@@ -139,7 +139,7 @@ if [ ! -f "$SCRIPT_DIR/web/index.html" ]; then
     if [ "$OS" = "darwin" ]; then
         ZIP_OS="macos"
     fi
-    PKG_URL="https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-${ZIP_OS}.zip"
+    PKG_URL="https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/antigravity-server-${ZIP_OS}.zip"
     curl -fsSL "$PKG_URL" -o /tmp/antigravity-server.zip 2>/dev/null || true
     if [ -f /tmp/antigravity-server.zip ]; then
         mkdir -p /tmp/antigravity_pkg_extract

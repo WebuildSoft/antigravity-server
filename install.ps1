@@ -173,7 +173,7 @@ if (Test-Path "$scriptDir\antigravity-server" -PathType Container) {
 
 # Baixar pacote da interface web se nao existir
 if (-not (Test-Path "$scriptDir\web\index.html")) {
-    $pkgUrl = "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/download/v1.4.0/antigravity-server-windows.zip"
+    $pkgUrl = "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/antigravity-server-windows.zip"
     $pkgZip = Join-Path $env:TEMP "antigravity-server-windows.zip"
     $pkgExtract = Join-Path $env:TEMP "antigravity_pkg_extract"
     if (Test-Path $pkgExtract) { Remove-Item -Path $pkgExtract -Recurse -Force -ErrorAction SilentlyContinue }
