@@ -8,7 +8,7 @@ Servidor companion de alta performance para conectar o aplicativo móvel **Antig
 
 [![Go Version](https://img.shields.io/badge/go-1.24-00ADD8?style=flat-square&logo=go&logoColor=white)](go.mod)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-334155?style=flat-square)](#início-rápido)
-[![License](https://img.shields.io/badge/license-MIT-emerald?style=flat-square)](LICENSE)
+[![Developer](https://img.shields.io/badge/developer-WebuildSoft-0284c7?style=flat-square)](https://github.com/WebuildSoft)
 
 </div>
 
@@ -113,6 +113,6 @@ antigravity-server/
 
 <div align="center">
 
-Desenvolvido por WebuildSoft • Licença MIT • 2026
+Desenvolvido por WebuildSoft • Todos os direitos reservados © 2026
 
 </div>
