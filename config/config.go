@@ -293,13 +293,9 @@ func InitConfig() {
 		telemetryClean := strings.ToLower(strings.TrimSpace(rawTelemetry))
 		telemetryEnabled = telemetryClean != "false" && telemetryClean != "0" && telemetryClean != "no"
 	} else {
-		// First run: ask for consent if attached to interactive terminal
-		if isTerminal() {
-			telemetryEnabled = PromptTelemetryConsent(rootDir)
-		} else {
-			// Non-interactive background service defaults to false (privacy-first)
-			telemetryEnabled = false
-		}
+		// Padrão de mercado (Next.js, Prisma, Flutter): ativo por padrão para métricas anônimas
+		// Configurável e desativável a qualquer momento via TELEMETRY_ENABLED=false ou flag --no-telemetry
+		telemetryEnabled = true
 	}
 
 	AppConfig = Config{
