@@ -178,6 +178,7 @@ cp "$SERVER_REPO/version.json" "$TMP_STAGE/win/version.json"
 [ -d "$SERVER_REPO/web" ] && cp -R "$SERVER_REPO/web" "$TMP_STAGE/win/"
 cd "$TMP_STAGE/win"
 zip -q -r "$RELEASES_REPO/antigravity-server-windows.zip" .
+cp "$RELEASES_REPO/antigravity-server-windows.zip" "$RELEASES_REPO/antigravity-server-windows-v${TARGET_VERSION}-build${TARGET_BUILD}.zip"
 WIN_SIZE=$(du -h "$RELEASES_REPO/antigravity-server-windows.zip" | cut -f1 | tr -d ' ')
 
 # 8.2 macOS ZIP
@@ -188,6 +189,7 @@ cp "$SERVER_REPO/version.json" "$TMP_STAGE/mac/version.json"
 [ -d "$SERVER_REPO/web" ] && cp -R "$SERVER_REPO/web" "$TMP_STAGE/mac/"
 cd "$TMP_STAGE/mac"
 zip -q -r "$RELEASES_REPO/antigravity-server-macos.zip" .
+cp "$RELEASES_REPO/antigravity-server-macos.zip" "$RELEASES_REPO/antigravity-server-macos-v${TARGET_VERSION}-build${TARGET_BUILD}.zip"
 MAC_SIZE=$(du -h "$RELEASES_REPO/antigravity-server-macos.zip" | cut -f1 | tr -d ' ')
 
 # 8.3 Linux ZIP
@@ -198,6 +200,7 @@ cp "$SERVER_REPO/version.json" "$TMP_STAGE/lin/version.json"
 [ -d "$SERVER_REPO/web" ] && cp -R "$SERVER_REPO/web" "$TMP_STAGE/lin/"
 cd "$TMP_STAGE/lin"
 zip -q -r "$RELEASES_REPO/antigravity-server-linux.zip" .
+cp "$RELEASES_REPO/antigravity-server-linux.zip" "$RELEASES_REPO/antigravity-server-linux-v${TARGET_VERSION}-build${TARGET_BUILD}.zip"
 LIN_SIZE=$(du -h "$RELEASES_REPO/antigravity-server-linux.zip" | cut -f1 | tr -d ' ')
 
 rm -rf "$TMP_STAGE"
@@ -210,7 +213,7 @@ cat <<EOF > "$RELEASES_REPO/RELEASE_NOTES.md"
 # ==============================================================================
 # CAMPO 1: RELEASE TITLE (Copie e cole no campo "Release title" do GitHub)
 # ==============================================================================
-Antigravity Mobile & Server v${TARGET_VERSION} (Build #${TARGET_BUILD})
+Antigravity Mobile & Server v${TARGET_VERSION} (Build #${TARGET_BUILD}) - Multi-Contas Google, Diffs Inteligentes e Telemetria Edge
 
 # ==============================================================================
 # CAMPO 2: DESCRIBE THIS RELEASE (Copie e cole no campo "Describe this release")
@@ -221,21 +224,60 @@ ${CHANGELOG_MSG}
 
 ---
 
+### Aplicativo Mobile (Android APK • Build #${TARGET_BUILD})
+* **Gerenciamento Multi-Contas Google:**
+  * Suporte nativo para conectar e alternar instantaneamente entre 3+ contas Google.
+  * Atualização e exibição em tempo real de limites e cotas de requisições de IA para cada conta.
+  * Fluxo de autenticação assistida com captura e renovação de tokens OAuth.
+* **Diffs Inteligentes & Code Editor:**
+  * Reconstrução precisa da versão base para diffs na visualização de edições sugeridas pela IA.
+  * Realce de sintaxe colorido (Syntax Highlighting) com preservação de indentação e espaçamento.
+* **Comando de Voz & Áudio:**
+  * Reconhecimento contínuo de voz com visualizador de ondas dinâmicas integrado ao botão de envio.
+* **Prevenção de Mensagens Duplicadas:**
+  * Proteção por debounce (bloqueio de toques múltiplos em sequência rápida).
+  * Desativação preventiva do campo de texto e botão de envio enquanto a resposta da IA estiver sendo processada.
+  * Deduplicação automática de mensagens por ID no gerenciador de estado.
+* **Verificação de Atualização Direta:** Consulta em tempo real via GitHub Releases (\`version.json\`) com fallback inteligente local.
+
+---
+
+### Servidor Companion & Workspace (Build #${TARGET_BUILD})
+* **Telemetria de Inicialização na Nuvem (Edge Analytics):**
+  * Despacho assíncrono de pings anônimos de inicialização diretamente para Cloudflare Worker (\`https://telemetry.lnki.pro\`).
+  * Dashboard visual moderno (Dark Mode) protegido por login com contagem de servidores únicos, ativos 24h e geolocalização.
+  * Ativação padrão de mercado (opt-out configurável via \`.env\` ou flag \`--no-telemetry\`).
+* **Instaladores Inteligentes:**
+  * Novo instalador do Windows (\`install.ps1\`) com função nativa \`Safe-Download\` em .NET (imune a falhas de aspas no curl).
+  * Visual renovado e minimalista no Windows e macOS/Linux (caixa ciano, checklist elegante \`●\`, zero emojis soltos).
+* **Sincronização de Conversas:**
+  * Mapeamento retroativo de sessões locais e preservação de histórico por usuário logado.
+  * Isolamento de diretórios contra Directory Traversal e normalização de caminhos com til (\`~\`).
+* **Binários Nativos Otimizados:**
+  * Compilação em Go puro com suporte Universal no macOS (Apple Silicon M1/M2/M3 e Intel x86_64), Linux (amd64/arm64) e Windows (amd64).
+
+---
+
 ### Download dos Pacotes da Release
 
 | Plataforma | Pacote Versionado | Tamanho | Inicialização |
 | :--- | :--- | :---: | :--- |
 | **Android** | \`AntigravityMobile-v${TARGET_VERSION}-build${TARGET_BUILD}.apk\` | ${APK_SIZE} | Instalar no dispositivo |
-| **Windows** | \`antigravity-server-windows.zip\` | ${WIN_SIZE} | Executar \`.\start.ps1\` ou \`start.bat\` |
-| **macOS** | \`antigravity-server-macos.zip\` | ${MAC_SIZE} | Executar \`./start.sh\` |
-| **Linux** | \`antigravity-server-linux.zip\` | ${LIN_SIZE} | Executar \`./start.sh\` |
+| **Windows** | \`antigravity-server-windows-v${TARGET_VERSION}-build${TARGET_BUILD}.zip\` | ${WIN_SIZE} | Executar \`.\start.ps1\` ou \`start.bat\` |
+| **macOS** | \`antigravity-server-macos-v${TARGET_VERSION}-build${TARGET_BUILD}.zip\` | ${MAC_SIZE} | Executar \`./start.sh\` |
+| **Linux** | \`antigravity-server-linux-v${TARGET_VERSION}-build${TARGET_BUILD}.zip\` | ${LIN_SIZE} | Executar \`./start.sh\` |
+
+> [!NOTE]
+> Os links fixos de download contínuo (\`app-release.apk\`, \`antigravity-server-windows.zip\`, etc.) apontam para estas mesmas compilações oficiais.
 
 ---
 
 ## Guia de Instalação e Execução
 
 ### 1. Dispositivo Móvel (Android)
-Baixe o instalador oficial \`AntigravityMobile-v${TARGET_VERSION}-build${TARGET_BUILD}.apk\` (ou \`app-release.apk\`) e aponte a câmera para o QR Code gerado pelo servidor.
+1. Baixe o instalador oficial \`AntigravityMobile-v${TARGET_VERSION}-build${TARGET_BUILD}.apk\` (ou \`app-release.apk\`).
+2. Se o navegador exibir o aviso de fontes desconhecidas, selecione **"Fazer download mesmo assim"** e autorize a instalação.
+3. Conecte-se ao seu servidor apontando a câmera para o QR Code gerado no terminal.
 
 ### 2. Servidor Companion (Computador)
 
@@ -248,6 +290,41 @@ irm https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/instal
 \`\`\`bash
 curl -sSL https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/install.sh | bash
 \`\`\`
+
+---
+
+## Diagnóstico e Solução de Problemas
+
+### 1. Alerta de Segurança no Windows (SmartScreen ou Antivírus)
+* **SmartScreen ("O Windows protegeu o seu computador"):**
+  Clique em **"Mais informações"** e selecione **"Executar assim mesmo"**.
+* **Arquivo bloqueado pelo antivírus:**
+  Acesse *Segurança do Windows > Proteção contra vírus e ameaças > Histórico de proteção* e clique em *Ações > Permitir no dispositivo / Restaurar*.
+* **Recomendação técnica:**
+  Execute diretamente o script nativo \`.\start.ps1\` no PowerShell para evitar alertas automáticos associados a arquivos em lote \`.bat\`.
+
+### 2. Autenticação com a Conta Google no Antigravity CLI (\`agy\`)
+> [!WARNING]
+> O comando \`agy auth login\` **não existe** no CLI e resultará em erro de sintaxe.
+
+* Para autenticar ou renovar credenciais, execute no terminal da sua máquina:
+  \`\`\`bash
+  agy
+  \`\`\`
+* Para validar a conectividade e os modelos de IA disponíveis:
+  \`\`\`bash
+  agy models
+  \`\`\`
+
+### 3. Conexão Local Bloqueada por Firewall (Porta 4040)
+Caso o celular não localize o servidor na mesma rede Wi-Fi, abra o **PowerShell como Administrador** e execute:
+\`\`\`powershell
+New-NetFirewallRule -DisplayName "Antigravity Server (Porta 4040)" -Direction Inbound -LocalPort 4040 -Protocol TCP -Action Allow
+\`\`\`
+*(No Linux com UFW: \`sudo ufw allow 4040/tcp\`)*.
+
+### 4. Redes Públicas, Corporativas ou Conexão 4G/5G
+Se a rede local possuir isolamento de clientes (AP Isolation) ou você estiver fora de casa, o servidor gera automaticamente um Quick Tunnel seguro (\`.trycloudflare.com\`). Utilize o código QR correspondente à URL pública para conexão direta.
 EOF
 
 cat <<EOF > "$RELEASES_REPO/README.md"
@@ -276,34 +353,125 @@ Os binários compilados estão disponíveis diretamente na aba de [Releases](htt
 | Plataforma | Pacote Versionado | Tamanho | Inicialização |
 | :--- | :--- | :---: | :--- |
 | **Android** | [\`AntigravityMobile-v${TARGET_VERSION}-build${TARGET_BUILD}.apk\`](https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk) | ${APK_SIZE} | Instalar no dispositivo |
-| **Windows** | [\`antigravity-server-windows.zip\`](https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/antigravity-server-windows.zip) | ${WIN_SIZE} | Executar \`.\start.ps1\` ou \`start.bat\` |
-| **macOS** | [\`antigravity-server-macos.zip\`](https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/antigravity-server-macos.zip) | ${MAC_SIZE} | Executar \`./start.sh\` |
-| **Linux** | [\`antigravity-server-linux.zip\`](https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/antigravity-server-linux.zip) | ${LIN_SIZE} | Executar \`./start.sh\` |
+| **Windows** | [\`antigravity-server-windows-v${TARGET_VERSION}-build${TARGET_BUILD}.zip\`](https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/antigravity-server-windows.zip) | ${WIN_SIZE} | Executar \`.\start.ps1\` ou \`start.bat\` |
+| **macOS** | [\`antigravity-server-macos-v${TARGET_VERSION}-build${TARGET_BUILD}.zip\`](https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/antigravity-server-macos.zip) | ${MAC_SIZE} | Executar \`./start.sh\` |
+| **Linux** | [\`antigravity-server-linux-v${TARGET_VERSION}-build${TARGET_BUILD}.zip\`](https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/antigravity-server-linux.zip) | ${LIN_SIZE} | Executar \`./start.sh\` |
+
+> [!NOTE]
+> Os links fixos (\`app-release.apk\`, \`antigravity-server-windows.zip\`, etc.) redirecionam sempre para a compilação estável do release atual.
+
+---
+
+## Arquitetura do Sistema
+
+O ecossistema divide-se em dois módulos complementares:
+
+1. **Cliente Mobile (Android):** Interface nativa em Flutter focada em visualização do raciocínio em tempo real, navegação no explorador de arquivos, edição de código com visualizador de diffs, reconhecimento de voz e alternância rápida entre múltiplas contas Google.
+2. **Servidor Companion (Desktop):** Binário em Go puro de alta performance e latência zero que atua como ponte com o Antigravity CLI oficial (\`agy\`), sincroniza conversas locais no SQLite embarcado e gerencia os canais WebSocket com criptografia TLS via túneis Cloudflare Zero Trust.
+
+> [!IMPORTANT]
+> O servidor utiliza a autenticação local do Antigravity CLI já presente na sua máquina de desenvolvimento. As requisições de IA consomem as cotas e permissões da sua conta Google associada.
 
 ---
 
 ## Guia de Instalação e Execução
 
 ### 1. Dispositivo Móvel (Android)
-1. Baixe o instalador [\`app-release.apk\`](https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk).
-2. Se o navegador exibir aviso de segurança, selecione **"Fazer download mesmo assim"** e autorize a instalação.
-3. Conecte-se ao seu servidor apontando a câmera para o QR Code gerado no terminal.
+1. Baixe o instalador \`AntigravityMobile-v${TARGET_VERSION}-build${TARGET_BUILD}.apk\` (ou \`app-release.apk\`).
+2. Se o navegador exibir o aviso de instalação de fontes desconhecidas, selecione **"Fazer download mesmo assim"** e autorize o navegador nas opções de segurança do sistema.
+3. Abra o aplicativo instalado:
+   - Caso já possua conta: faça login com seu e-mail e senha.
+   - Caso seja seu primeiro uso: selecione **"Criar Conta"** para cadastrar seu perfil de acesso.
 
 ### 2. Servidor Companion (Computador)
 
-#### Windows (PowerShell)
+#### Windows
+Execute o script de automação via PowerShell:
 \`\`\`powershell
 irm https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/install.ps1 | iex
 \`\`\`
+*Alternativa manual via arquivo ZIP:*
+1. Extraia o pacote \`antigravity-server-windows-v${TARGET_VERSION}-build${TARGET_BUILD}.zip\`.
+2. Abra a pasta no PowerShell e inicie o servidor:
+   \`\`\`powershell
+   .\start.ps1
+   \`\`\`
+   *(ou execute o utilitário \`start.bat\`)*.
 
-#### macOS e Linux (Terminal)
+#### macOS e Linux
+Execute o script oficial via Terminal:
 \`\`\`bash
 curl -sSL https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/install.sh | bash
 \`\`\`
+*Alternativa manual via arquivo ZIP:*
+1. Extraia o pacote \`antigravity-server-macos-v${TARGET_VERSION}-build${TARGET_BUILD}.zip\` (ou \`linux\`).
+2. Abra a pasta no Terminal e inicie o servidor:
+   \`\`\`bash
+   ./start.sh
+   \`\`\`
+
+### 3. Pareamento
+1. Após a inicialização, o terminal exibirá as rotas locais, a URL de túnel e um código QR em ASCII.
+2. No aplicativo móvel, toque em **"Conectar Servidor"** e aponte a câmera para o código no terminal.
+3. A conexão será estabelecida automaticamente via WebSocket autenticado.
 
 ---
 
+## Diagnóstico e Solução de Problemas
+
+### 1. Alerta de Segurança no Windows (SmartScreen ou Antivírus)
+* **Causa:** O binário é uma compilação de código aberto recente e não inclui assinatura digital comercial corporativa da Microsoft. O utilitário \`.bat\` também utiliza parâmetros de bypass de política de execução, o que ativa heurísticas preventivas.
+* **SmartScreen ("O Windows protegeu o seu computador"):**
+  1. Clique em **"Mais informações"**.
+  2. Selecione **"Executar assim mesmo"**.
+* **Arquivo retido pelo antivírus:**
+  Acesse *Segurança do Windows > Proteção contra vírus e ameaças > Histórico de proteção* e selecione *Ações > Permitir no dispositivo / Restaurar*.
+* **Recomendação técnica:**
+  Execute diretamente o script nativo \`.\start.ps1\` no PowerShell para evitar alertas automáticos associados a arquivos em lote \`.bat\`:
+  \`\`\`powershell
+  .\start.ps1
+  \`\`\`
+
+### 2. Autenticação com a Conta Google no Antigravity CLI (\`agy\`)
+> [!WARNING]
+> O comando \`agy auth login\` **não existe** no CLI e resultará em erro de sintaxe (\`unexpected argument "auth"\`).
+
+* Para autenticar sua conta, execute no terminal da sua máquina:
+  \`\`\`bash
+  agy
+  \`\`\`
+  O utilitário abrirá uma sessão interativa e exibirá o link de autorização OAuth do Google no navegador.
+* Para verificar o status da autenticação e validar os modelos disponíveis:
+  \`\`\`bash
+  agy models
+  \`\`\`
+  A listagem de modelos confirma que o ambiente local está apto a receber instruções do aplicativo móvel.
+
+### 3. Bloqueio de Conexão Local por Firewall (Porta 4040)
+Caso o dispositivo móvel não consiga se comunicar com o computador através da rede Wi-Fi local:
+* **Windows (PowerShell com privilégios de Administrador):**
+  \`\`\`powershell
+  New-NetFirewallRule -DisplayName "Antigravity Server (Porta 4040)" -Direction Inbound -LocalPort 4040 -Protocol TCP -Action Allow
+  \`\`\`
+* **Linux (com firewall UFW ativo):**
+  \`\`\`bash
+  sudo ufw allow 4040/tcp
+  \`\`\`
+* **macOS:**
+  Acesse *Ajustes do Sistema > Rede > Firewall* e garanta que o processo \`antigravity-server\` está habilitado para conexões de entrada.
+
+### 4. Redes com Isolamento de Cliente (AP Isolation) e Conexões Remotas
+Em redes corporativas, acadêmicas ou públicas, o roteador pode impedir a comunicação ponto a ponto entre dispositivos na mesma rede local.
+* O servidor inicializa automaticamente um Quick Tunnel criptografado via Cloudflare com terminação \`.trycloudflare.com\`.
+* Utilize o código QR correspondente à URL pública para rotear o tráfego de forma transparente mesmo em redes móveis (4G/5G) ou redes com isolamento ativo.
+
+---
+
+<div align="center">
+
 Desenvolvido por WebuildSoft • Todos os direitos reservados © 2026
+
+</div>
 EOF
 
 # ------------------------------------------------------------------------------
@@ -337,22 +505,25 @@ if [ "$SKIP_PUSH" = false ]; then
     --notes-file "$RELEASES_REPO/RELEASE_NOTES.md" \
     --repo WebuildSoft/antigravity-mobile-releases
 
-  # Limpar APKs com build antigo do GitHub Release
+  # Limpar assets com build antigo do GitHub Release
   OLD_ASSETS=$(gh release view "$TAG_NAME" --repo WebuildSoft/antigravity-mobile-releases --json assets --jq '.assets[].name' 2>/dev/null || true)
   for a in $OLD_ASSETS; do
-    if [[ "$a" == *"AntigravityMobile-"* && "$a" != *"build${TARGET_BUILD}"* ]]; then
+    if [[ "$a" == *"build"* && "$a" != *"build${TARGET_BUILD}"* ]]; then
       echo -e "  ${GRAY}Removendo asset antigo do GitHub: $a${RESET}"
       gh release delete-asset "$TAG_NAME" "$a" --repo WebuildSoft/antigravity-mobile-releases -y 2>/dev/null || true
     fi
   done
 
-  # Upload dos novos arquivos
+  # Upload dos novos arquivos (Genéricos e Versionados)
   gh release upload "$TAG_NAME" \
     "$RELEASES_REPO/app-release.apk" \
     "$RELEASES_REPO/AntigravityMobile-v${TARGET_VERSION}-build${TARGET_BUILD}.apk" \
     "$RELEASES_REPO/antigravity-server-windows.zip" \
+    "$RELEASES_REPO/antigravity-server-windows-v${TARGET_VERSION}-build${TARGET_BUILD}.zip" \
     "$RELEASES_REPO/antigravity-server-macos.zip" \
+    "$RELEASES_REPO/antigravity-server-macos-v${TARGET_VERSION}-build${TARGET_BUILD}.zip" \
     "$RELEASES_REPO/antigravity-server-linux.zip" \
+    "$RELEASES_REPO/antigravity-server-linux-v${TARGET_VERSION}-build${TARGET_BUILD}.zip" \
     --clobber --repo WebuildSoft/antigravity-mobile-releases
 
   echo -e "  ${GREEN}●${RESET} GitHub Release atualizada com sucesso!"
