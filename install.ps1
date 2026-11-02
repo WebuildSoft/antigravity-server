@@ -13,6 +13,32 @@ function Print-Bullet($label, $value, $color = "Green") {
     Write-Host $value
 }
 
+function Safe-Download($url, $dest, $useCacheBust = $false) {
+    $targetUrl = $url
+    if ($useCacheBust) {
+        $targetUrl = "$url?v=" + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    }
+
+    $downloaded = $false
+    try {
+        $wc = New-Object System.Net.WebClient
+        $wc.Headers.Add("User-Agent", "AntigravityInstaller/1.4.0 (Windows)")
+        $wc.DownloadFile($targetUrl, $dest)
+        $downloaded = $true
+    } catch {}
+
+    if (-not $downloaded) {
+        try {
+            Invoke-WebRequest -Uri $targetUrl -OutFile $dest -UseBasicParsing -TimeoutSec 30
+            $downloaded = $true
+        } catch {}
+    }
+
+    if (-not $downloaded -and (Get-Command curl.exe -ErrorAction SilentlyContinue)) {
+        & curl.exe -fsSL "$url" -o "$dest"
+    }
+}
+
 Write-Host ""
 Write-Host "╭─────────────────────────────────────────────────────────────╮" -ForegroundColor Cyan
 Write-Host "│  ANTIGRAVITY SERVER • INSTALADOR (WINDOWS)                  │" -ForegroundColor Cyan
@@ -92,7 +118,8 @@ if ($agyPath) {
     $authOk = $false
     try {
         $modelsLog = Join-Path $env:TEMP "agy_models.txt"
-        $p = Start-Process -FilePath $agyPath -ArgumentList "models" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $modelsLog -ErrorAction SilentlyContinue
+        $modelsErr = Join-Path $env:TEMP "agy_models_err.txt"
+        $p = Start-Process -FilePath $agyPath -ArgumentList "models" -NoNewWindow -Wait -PassThru -RedirectStandardOutput $modelsLog -RedirectStandardError $modelsErr -ErrorAction SilentlyContinue
         if ($p.ExitCode -eq 0) {
             $authOk = $true
         }
@@ -118,11 +145,7 @@ if (-not (Test-Path $cfPath)) {
         Print-Bullet "Túnel Seguro:" "Cloudflare Zero Trust pronto" "Green"
     } else {
         $cfUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
-        if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-            curl.exe -fsSL "$cfUrl" -o "$cfPath" 2>$null
-        } else {
-            Invoke-WebRequest -Uri $cfUrl -OutFile $cfPath -UseBasicParsing
-        }
+        Safe-Download $cfUrl $cfPath $false
         Unblock-File -Path "$cfPath" -ErrorAction SilentlyContinue
         Print-Bullet "Túnel Seguro:" "Cloudflare Zero Trust configurado" "Green"
     }
@@ -154,11 +177,7 @@ if (-not (Test-Path "$scriptDir\web\index.html")) {
     $pkgZip = Join-Path $env:TEMP "antigravity-server-windows.zip"
     $pkgExtract = Join-Path $env:TEMP "antigravity_pkg_extract"
     if (Test-Path $pkgExtract) { Remove-Item -Path $pkgExtract -Recurse -Force -ErrorAction SilentlyContinue }
-    if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-        curl.exe -fsSL "$pkgUrl" -o "$pkgZip" 2>$null
-    } else {
-        Invoke-WebRequest -Uri $pkgUrl -OutFile $pkgZip -UseBasicParsing
-    }
+    Safe-Download $pkgUrl $pkgZip $false
     Expand-Archive -Path $pkgZip -DestinationPath $pkgExtract -Force
     if (Test-Path "$pkgExtract\antigravity-server\web") {
         Copy-Item -Path "$pkgExtract\antigravity-server\web" -Destination $scriptDir -Recurse -Force
@@ -169,13 +188,8 @@ if (-not (Test-Path "$scriptDir\web\index.html")) {
 }
 Print-Bullet "Interface Web:" "Flutter Web client pronto" "Green"
 
-if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-    curl.exe -fsSL "$startPs1Url" -o "$scriptDir\start.ps1" 2>$null
-    curl.exe -fsSL "$startBatUrl" -o "$scriptDir\start.bat" 2>$null
-} else {
-    Invoke-WebRequest -Uri $startPs1Url -OutFile "$scriptDir\start.ps1" -UseBasicParsing
-    Invoke-WebRequest -Uri $startBatUrl -OutFile "$scriptDir\start.bat" -UseBasicParsing
-}
+Safe-Download $startPs1Url "$scriptDir\start.ps1" $true
+Safe-Download $startBatUrl "$scriptDir\start.bat" $true
 Unblock-File -Path "$scriptDir\start.ps1" -ErrorAction SilentlyContinue
 Unblock-File -Path "$scriptDir\start.bat" -ErrorAction SilentlyContinue
 
@@ -183,7 +197,7 @@ if (-not (Test-Path "$scriptDir\.env")) {
     if (Test-Path "$scriptDir\.env.example") {
         Copy-Item "$scriptDir\.env.example" "$scriptDir\.env"
     } else {
-        Invoke-WebRequest -Uri $envExUrl -OutFile "$scriptDir\.env" -UseBasicParsing
+        Safe-Download $envExUrl "$scriptDir\.env" $false
     }
 }
 
@@ -194,12 +208,7 @@ $prebuilt = "$scriptDir\bin\antigravity-server-windows-amd64.exe"
 if ((Test-Path $prebuilt) -and (Test-Path "$scriptDir\main.go")) {
     try { Copy-Item $prebuilt $serverExe -Force -ErrorAction SilentlyContinue } catch {}
 } else {
-    $repoExeUrlCacheBust = "$repoExeUrl?v=" + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-    if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-        curl.exe -fsSL "$repoExeUrlCacheBust" -o "$serverExe" 2>$null
-    } else {
-        Invoke-WebRequest -Uri $repoExeUrlCacheBust -OutFile $serverExe -UseBasicParsing
-    }
+    Safe-Download $repoExeUrl $serverExe $true
 }
 Unblock-File -Path "$serverExe" -ErrorAction SilentlyContinue
 Print-Bullet "Executável:" "Servidor nativo atualizado" "Green"
