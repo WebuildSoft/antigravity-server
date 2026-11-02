@@ -187,7 +187,7 @@ else
     echo -e "      ${GREEN}✓ Interface web pronta em web/${RESET}"
 fi
 
-curl -fsSL "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.sh" -o "$SCRIPT_DIR/start.sh"
+curl -fsSL "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/start.sh?v=$(date +%s)" -o "$SCRIPT_DIR/start.sh"
 chmod +x "$SCRIPT_DIR/start.sh"
 
 if [ ! -f "$SCRIPT_DIR/.env" ]; then
@@ -195,17 +195,18 @@ if [ ! -f "$SCRIPT_DIR/.env" ]; then
     echo -e "      ${GREEN}✓ Arquivo .env configurado com sucesso${RESET}"
 fi
 
-if [ ! -f "$SCRIPT_DIR/antigravity-server" ]; then
-    PREBUILT="$SCRIPT_DIR/bin/antigravity-server-${OS}-${GO_ARCH}"
-    if [ -f "$PREBUILT" ]; then
-        echo -e "      ${GREEN}✓ Utilizando binário pré-compilado para ${OS}-${GO_ARCH}${RESET}"
-        cp "$PREBUILT" "$SCRIPT_DIR/antigravity-server"
-    else
-        echo -e "      ${CYAN}⬇ Baixando executável do servidor para ${OS}-${GO_ARCH}...${RESET}"
-        EXE_URL="https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-${OS}-${GO_ARCH}"
-        curl -# -fSL "$EXE_URL" -o "$SCRIPT_DIR/antigravity-server"
-        echo -e "      ${GREEN}✓ Executável antigravity-server pronto${RESET}"
-    fi
+PREBUILT="$SCRIPT_DIR/bin/antigravity-server-${OS}-${GO_ARCH}"
+if [ -f "$PREBUILT" ] && [ -f "$SCRIPT_DIR/main.go" ]; then
+    echo -e "      ${GREEN}✓ Utilizando binário pré-compilado local para ${OS}-${GO_ARCH}${RESET}"
+    cp "$PREBUILT" "$SCRIPT_DIR/antigravity-server"
+else
+    echo -e "      ${CYAN}⬇ Baixando/Atualizando executável oficial (${OS}-${GO_ARCH})...${RESET}"
+    pkill -f "$SCRIPT_DIR/antigravity-server" 2>/dev/null || true
+    EXE_URL="https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-${OS}-${GO_ARCH}?v=$(date +%s)"
+    curl -# -fSL "$EXE_URL" -o "$SCRIPT_DIR/antigravity-server.tmp"
+    chmod +x "$SCRIPT_DIR/antigravity-server.tmp"
+    mv -f "$SCRIPT_DIR/antigravity-server.tmp" "$SCRIPT_DIR/antigravity-server"
+    echo -e "      ${GREEN}✓ Executável antigravity-server atualizado com sucesso${RESET}"
 fi
 chmod +x "$SCRIPT_DIR/antigravity-server"
 

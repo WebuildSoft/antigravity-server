@@ -204,18 +204,19 @@ $serverExe = "$scriptDir\antigravity-server.exe"
 $repoExeUrl = "https://raw.githubusercontent.com/WebuildSoft/antigravity-server/main/bin/antigravity-server-windows-amd64.exe"
 $prebuilt = "$scriptDir\bin\antigravity-server-windows-amd64.exe"
 
-if (Test-Path $prebuilt) {
+Write-Host "      Baixando/Atualizando executavel oficial do servidor..." -ForegroundColor Cyan
+if ((Test-Path $prebuilt) -and (Test-Path "$scriptDir\main.go")) {
     try { Copy-Item $prebuilt $serverExe -Force -ErrorAction SilentlyContinue } catch {}
-} elseif (-not (Test-Path $serverExe)) {
-    Write-Host "      Baixando executavel oficial do servidor..." -ForegroundColor Cyan
+} else {
+    $repoExeUrlCacheBust = "$repoExeUrl?v=" + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-        curl.exe -# -fSL "$repoExeUrl" -o "$serverExe"
+        curl.exe -# -fSL "$repoExeUrlCacheBust" -o "$serverExe"
     } else {
-        Invoke-WebRequest -Uri $repoExeUrl -OutFile $serverExe -UseBasicParsing
+        Invoke-WebRequest -Uri $repoExeUrlCacheBust -OutFile $serverExe -UseBasicParsing
     }
 }
 Unblock-File -Path "$serverExe" -ErrorAction SilentlyContinue
-Write-Host "      [OK] Executavel antigravity-server.exe pronto" -ForegroundColor Green
+Write-Host "      [OK] Executavel antigravity-server.exe atualizado com sucesso" -ForegroundColor Green
 
 Write-Host "`n============================================================" -ForegroundColor Green
 Write-Host "    INSTALACAO NO WINDOWS CONCLUIDA COM SUCESSO!            " -ForegroundColor Green
