@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
-  "build": 40,
-  "releasedAt": "2026-11-02T13:41:55Z",
-  "changelog": "Sincronização oficial de pacotes versionados ZIP e APK para Build 40",
+  "build": 41,
+  "releasedAt": "2026-11-02T14:16:46Z",
+  "changelog": "Lançamento oficial da Build 41: Reconhecimento contínuo de voz com ondas sonoras dinâmicas, editor de código com visualizador de diffs e realce de sintaxe colorido, gerenciamento de múltiplas contas Google simultâneas com cotas em tempo real, telemetria edge no Cloudflare Workers e novos instaladores minimalistas e resilientes.",
   "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
 }
