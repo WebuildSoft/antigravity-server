@@ -39,7 +39,7 @@ done
 TARGET_VERSION=""
 TARGET_BUILD=""
 CHANGELOG_MSG=""
-DO_BUILD_APK=false
+DO_BUILD_APK=true
 SKIP_PUSH=false
 
 while [[ "$#" -gt 0 ]]; do
@@ -48,6 +48,7 @@ while [[ "$#" -gt 0 ]]; do
     --build|-b) TARGET_BUILD="$2"; shift ;;
     --changelog|-c) CHANGELOG_MSG="$2"; shift ;;
     --build-apk) DO_BUILD_APK=true ;;
+    --skip-apk|--no-apk) DO_BUILD_APK=false ;;
     --skip-push) SKIP_PUSH=true ;;
     *)
       if [ -z "$TARGET_VERSION" ]; then
