@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
-  "build": 45,
-  "releasedAt": "2026-11-02T20:24:53Z",
-  "changelog": "Sincronização nativa do OS Keyring (macOS Keychain, Windows Credential Manager, Linux) para alternância real de contas no Agy e melhoria no parser de cotas",
+  "build": 46,
+  "releasedAt": "2026-11-03T04:10:29Z",
+  "changelog": "Release oficial com compilação completa do Flutter APK e servidores com sincronização nativa de Keyring",
   "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
 }
