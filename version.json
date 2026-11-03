@@ -1,7 +1,7 @@
 {
-  "version": "1.4.0",
-  "build": 47,
-  "releasedAt": "2026-11-03T13:40:35Z",
-  "changelog": "Seletor dinâmico de modelos de IA no chat (Gemini 3.8 Flash, Claude Sonnet/Opus, GPT-OSS), acompanhamento de cotas em tempo real, healthcheck de termos TOS Google e proteção contra falhas de credenciais.",
+  "version": "1.4.1",
+  "build": 48,
+  "releasedAt": "2026-11-03T14:12:16Z",
+  "changelog": "Correção do seletor de modelos de IA no chat (toque imediato, bottom sheet com altura dinâmica, modelos pré-carregados e sincronização WebSocket)",
   "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
 }

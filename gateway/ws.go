@@ -229,6 +229,14 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		clientAccounts = []services.AccountProfile{}
 	}
 
+	modelsResp, _ := services.FetchAvailableModels(false)
+	var clientModels []services.AiModelInfo
+	activeModel := services.GetActiveModel()
+	if modelsResp != nil {
+		clientModels = modelsResp.Models
+		activeModel = modelsResp.ActiveModel
+	}
+
 	_ = client.Send(map[string]interface{}{
 		"type":                 "connected",
 		"message":              "Connected to Antigravity Mobile Bridge (Go)",
@@ -240,6 +248,8 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		"latestConversationId": latestID,
 		"appVersion":           services.LoadVersionData(),
 		"accounts":             clientAccounts,
+		"models":               clientModels,
+		"activeModel":          activeModel,
 		"workspace":            clientWorkspace,
 		"telemetryEnabled":     config.AppConfig.TelemetryEnabled,
 	})

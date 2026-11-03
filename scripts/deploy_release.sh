@@ -41,6 +41,7 @@ TARGET_BUILD=""
 CHANGELOG_MSG=""
 DO_BUILD_APK=true
 SKIP_PUSH=false
+SKIP_AI=false
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
@@ -49,6 +50,7 @@ while [[ "$#" -gt 0 ]]; do
     --changelog|-c) CHANGELOG_MSG="$2"; shift ;;
     --build-apk) DO_BUILD_APK=true ;;
     --skip-apk|--no-apk) DO_BUILD_APK=false ;;
+    --skip-ai|--no-ai) SKIP_AI=true ;;
     --skip-push) SKIP_PUSH=true ;;
     *)
       if [ -z "$TARGET_VERSION" ]; then
@@ -75,6 +77,36 @@ fi
 if [ -z "$TARGET_BUILD" ]; then
   TARGET_BUILD=$((CURRENT_BLD + 1))
 fi
+
+# 3.1 Geração Inteligente de Changelog e Release Notes via IA
+AI_NOTES_JSON="/tmp/antigravity_release_notes.json"
+AI_MOBILE_HL=""
+AI_SERVER_HL=""
+
+if [ "$SKIP_AI" = false ]; then
+  echo -e "  ${CYAN}●${RESET} ${BOLD}IA Engine:${RESET} Analisando commits recentes com a IA Antigravity..."
+  GEN_SCRIPT="$SERVER_REPO/scripts/generate_release_notes.py"
+  if [ -f "$GEN_SCRIPT" ]; then
+    python3 "$GEN_SCRIPT" \
+      --mobile-dir "$MOBILE_REPO" \
+      --server-dir "$SERVER_REPO" \
+      --version "$TARGET_VERSION" \
+      --build "$TARGET_BUILD" \
+      --output-json "$AI_NOTES_JSON" 2>/dev/null || true
+      
+    if [ -f "$AI_NOTES_JSON" ]; then
+      AI_SHORT=$(python3 -c "import json; data=json.load(open('$AI_NOTES_JSON')); print(data.get('short_changelog', ''))" 2>/dev/null || true)
+      AI_MOBILE_HL=$(python3 -c "import json; data=json.load(open('$AI_NOTES_JSON')); print(data.get('mobile_highlights', ''))" 2>/dev/null || true)
+      AI_SERVER_HL=$(python3 -c "import json; data=json.load(open('$AI_NOTES_JSON')); print(data.get('server_highlights', ''))" 2>/dev/null || true)
+
+      if [ -z "$CHANGELOG_MSG" ] && [ -n "$AI_SHORT" ]; then
+        CHANGELOG_MSG="$AI_SHORT"
+        echo -e "  ${GREEN}●${RESET} ${BOLD}Changelog IA:${RESET}   ${CHANGELOG_MSG}"
+      fi
+    fi
+  fi
+fi
+
 if [ -z "$CHANGELOG_MSG" ]; then
   CHANGELOG_MSG="Atualização de desempenho, melhorias de conectividade e sincronização com o ecossistema Antigravity."
 fi
@@ -224,6 +256,13 @@ echo -e "  ${GREEN}●${RESET} Windows ZIP: ${WIN_SIZE} | macOS ZIP: ${MAC_SIZE}
 # ------------------------------------------------------------------------------
 # 9. Atualização da Documentação Oficial (README & RELEASE_NOTES)
 # ------------------------------------------------------------------------------
+if [ -z "$AI_MOBILE_HL" ]; then
+  AI_MOBILE_HL="* **Melhorias contínuas:** Otimizações de interface, estabilidade e sincronização de dados."
+fi
+if [ -z "$AI_SERVER_HL" ]; then
+  AI_SERVER_HL="* **Melhorias contínuas:** Otimizações de rede, túneis Cloudflare e estabilidade do daemon."
+fi
+
 cat <<EOF > "$RELEASES_REPO/RELEASE_NOTES.md"
 ## Novidades da Versão v${TARGET_VERSION} (Build #${TARGET_BUILD})
 
@@ -232,36 +271,12 @@ ${CHANGELOG_MSG}
 ---
 
 ### Aplicativo Mobile (Android APK • Build #${TARGET_BUILD})
-* **Gerenciamento Multi-Contas Google:**
-  * Suporte nativo para conectar e alternar instantaneamente entre 3+ contas Google.
-  * Atualização e exibição em tempo real de limites e cotas de requisições de IA para cada conta.
-  * Fluxo de autenticação assistida com captura e renovação de tokens OAuth.
-* **Diffs Inteligentes & Code Editor:**
-  * Reconstrução precisa da versão base para diffs na visualização de edições sugeridas pela IA.
-  * Realce de sintaxe colorido (Syntax Highlighting) com preservação de indentação e espaçamento.
-* **Comando de Voz & Áudio:**
-  * Reconhecimento contínuo de voz com visualizador de ondas dinâmicas integrado ao botão de envio.
-* **Prevenção de Mensagens Duplicadas:**
-  * Proteção por debounce (bloqueio de toques múltiplos em sequência rápida).
-  * Desativação preventiva do campo de texto e botão de envio enquanto a resposta da IA estiver sendo processada.
-  * Deduplicação automática de mensagens por ID no gerenciador de estado.
-* **Verificação de Atualização Direta:** Consulta em tempo real via GitHub Releases (\`version.json\`) com fallback inteligente local.
+${AI_MOBILE_HL}
 
 ---
 
 ### Servidor Companion & Workspace (Build #${TARGET_BUILD})
-* **Telemetria de Inicialização na Nuvem (Edge Analytics):**
-  * Despacho assíncrono de pings anônimos de inicialização diretamente para Cloudflare Worker (\`https://telemetry.lnki.pro\`).
-  * Dashboard visual moderno (Dark Mode) protegido por login com contagem de servidores únicos, ativos 24h e geolocalização.
-  * Ativação padrão de mercado (opt-out configurável via \`.env\` ou flag \`--no-telemetry\`).
-* **Instaladores Inteligentes:**
-  * Novo instalador do Windows (\`install.ps1\`) com função nativa \`Safe-Download\` em .NET (imune a falhas de aspas no curl).
-  * Visual renovado e minimalista no Windows e macOS/Linux (caixa ciano, checklist elegante \`●\`, zero emojis soltos).
-* **Sincronização de Conversas:**
-  * Mapeamento retroativo de sessões locais e preservação de histórico por usuário logado.
-  * Isolamento de diretórios contra Directory Traversal e normalização de caminhos com til (\`~\`).
-* **Binários Nativos Otimizados:**
-  * Compilação em Go puro com suporte Universal no macOS (Apple Silicon M1/M2/M3 e Intel x86_64), Linux (amd64/arm64) e Windows (amd64).
+${AI_SERVER_HL}
 
 ---
 

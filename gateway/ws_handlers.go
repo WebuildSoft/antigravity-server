@@ -46,6 +46,10 @@ func (c *ClientConn) dispatchAction(action string, data map[string]interface{}, 
 		c.handleGetConversations()
 	case "get_quota":
 		c.handleGetQuota(data)
+	case "get_models":
+		c.handleGetModels(data)
+	case "set_active_model":
+		c.handleSetActiveModel(data)
 	case "get_accounts", "list_accounts", "switch_account", "import_account", "exchange_google_code", "remove_account":
 		c.handleAccounts(action, data, isRemote)
 	case "reset_conversation", "new_conversation":
@@ -133,6 +137,28 @@ func (c *ClientConn) handleGetQuota(data map[string]interface{}) {
 			"quota": qData,
 		})
 	}
+}
+
+func (c *ClientConn) handleGetModels(data map[string]interface{}) {
+	force, _ := data["refresh"].(bool)
+	resp, err := services.FetchAvailableModels(force)
+	if err != nil {
+		_ = c.Send(map[string]interface{}{"type": "models_error", "error": err.Error()})
+		return
+	}
+	_ = c.Send(map[string]interface{}{
+		"type":        "models_list",
+		"models":      resp.Models,
+		"activeModel": resp.ActiveModel,
+	})
+}
+
+func (c *ClientConn) handleSetActiveModel(data map[string]interface{}) {
+	modelID, _ := data["model"].(string)
+	if modelID == "" {
+		return
+	}
+	_ = services.SetActiveModel(modelID)
 }
 
 func (c *ClientConn) handleAccounts(action string, data map[string]interface{}, isRemote bool) {
