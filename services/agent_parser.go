@@ -216,8 +216,87 @@ func (s *Session) processStdout(stdout io.Reader, stdin io.Closer, cmd *exec.Cmd
 		}
 	}
 
-	_ = cmd.Wait()
+	waitErr := cmd.Wait()
+
+	s.Lock()
+	stderrLines := make([]string, len(s.StderrBuffer))
+	copy(stderrLines, s.StderrBuffer)
+	s.Unlock()
+
+	hasOutput := accumulatedAgentText.Len() > 0 || len(accumulatedToolCalls) > 0
+	if !hasOutput || waitErr != nil {
+		stderrCombined := strings.Join(stderrLines, "\n")
+		friendlyErr := formatFriendlyErrorMessage(waitErr, stderrCombined)
+		if friendlyErr != "" {
+			fmt.Printf("[WS] ⚠️ Detected error for session %s: %s\n", s.ID, friendlyErr)
+
+			// 1. Envia erro estruturado para o Flutter exibir alerta
+			s.Broadcast(map[string]interface{}{
+				"type":    "error",
+				"message": friendlyErr,
+			})
+
+			// 2. Envia step_update para a bolha do chat exibir a mensagem formatada em Markdown
+			s.Broadcast(map[string]interface{}{
+				"type": "step_update",
+				"step_update": map[string]interface{}{
+					"conversation_id": s.ID,
+					"step_index":      1,
+					"state":           "DONE",
+					"step_type":       "agent_response",
+					"text_delta":      friendlyErr,
+				},
+			})
+
+			// 3. Salva no histórico da conversa no banco SQLite
+			_ = db.SaveAgentMessage(task.MessageID+"_err", s.ID, friendlyErr, nil, nil, nil, time.Now().UnixMilli())
+		}
+	}
+
 	checkNextInQueue()
+}
+
+func formatFriendlyErrorMessage(cmdErr error, stderrOutput string) string {
+	lowerStderr := strings.ToLower(stderrOutput)
+
+	if strings.Contains(lowerStderr, "google tos") || strings.Contains(lowerStderr, "terms of service") || strings.Contains(lowerStderr, "not eligible for gemini code assist") {
+		return "⚠️ **Termos de Serviço Pendentes ou Conta Não Elegível (Google TOS)**\n\n" +
+			"A conta Google ativa não concluiu o aceite dos Termos de Serviço do **Gemini Code Assist for Individuals**.\n\n" +
+			"**Como Resolver:**\n" +
+			"1. Acesse **[codeassist.google](https://codeassist.google/)** no navegador conectado a esta conta e aceite os termos;\n" +
+			"2. Ou abra o Terminal no Mac e execute `~/.local/bin/agy` uma vez para aceitar o prompt;\n" +
+			"3. Ou no app, vá em **Gerenciar Contas** e alterne para a sua conta principal autorizada."
+	}
+
+	if strings.Contains(lowerStderr, "unauthenticated") || strings.Contains(lowerStderr, "code 401") || strings.Contains(lowerStderr, "invalid authentication credentials") {
+		return "🔒 **Erro de Autenticação (Código 401)**\n\n" +
+			"As credenciais da conta Google ativa expiraram, foram revogadas ou não foram encontradas.\n\n" +
+			"**Como Resolver:**\n" +
+			"1. No aplicativo ou web, abra o menu lateral e acesse **Gerenciar Contas**;\n" +
+			"2. Clique na sua conta para reativá-la ou faça login novamente;\n" +
+			"3. Envie sua mensagem novamente."
+	}
+
+	if strings.Contains(lowerStderr, "exhausted") || strings.Contains(lowerStderr, "quota") || strings.Contains(lowerStderr, "429") {
+		return "⏳ **Limite de Cota Atingido**\n\n" +
+			"A cota de uso do modelo nesta conta atingiu o limite temporário.\n\n" +
+			"**Como Resolver:**\n" +
+			"1. Alterne para outra conta Google no menu lateral para continuar conversando;\n" +
+			"2. Ou aguarde a renovação da cota."
+	}
+
+	if cmdErr != nil || strings.TrimSpace(stderrOutput) != "" {
+		trimmed := strings.TrimSpace(stderrOutput)
+		if len(trimmed) > 300 {
+			trimmed = trimmed[:300] + "..."
+		}
+		if trimmed == "" && cmdErr != nil {
+			trimmed = cmdErr.Error()
+		}
+		return fmt.Sprintf("⚠️ **Falha ao Executar Assistente**\n\n%s\n\nTente alternar de conta ou enviar a mensagem novamente.", trimmed)
+	}
+
+	return ""
 }
 
 func (s *Session) processStderr(stderr io.Reader) {
@@ -225,6 +304,12 @@ func (s *Session) processStderr(stderr io.Reader) {
 	for scanner.Scan() {
 		text := scanner.Text()
 		fmt.Printf("[agy stderr]: %s\n", text)
+		s.Lock()
+		s.StderrBuffer = append(s.StderrBuffer, text)
+		if len(s.StderrBuffer) > 50 {
+			s.StderrBuffer = s.StderrBuffer[len(s.StderrBuffer)-50:]
+		}
+		s.Unlock()
 		s.Broadcast(map[string]interface{}{
 			"type": "stderr",
 			"text": text,

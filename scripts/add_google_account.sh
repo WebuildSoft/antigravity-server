@@ -36,8 +36,22 @@ except: pass
         mkdir -p "$PROFILES_DIR/$CURRENT_EMAIL"
         cp "$CREDS_FILE" "$PROFILES_DIR/$CURRENT_EMAIL/oauth_creds.json"
     fi
-    mv "$CREDS_FILE" "$CREDS_FILE.bak"
+    cp "$CREDS_FILE" "$CREDS_FILE.bak"
+    mv "$CREDS_FILE" "$CREDS_FILE.temp_switch"
 fi
+
+restore_backup() {
+    if [ ! -s "$CREDS_FILE" ]; then
+        if [ -f "$CREDS_FILE.temp_switch" ]; then
+            mv "$CREDS_FILE.temp_switch" "$CREDS_FILE" 2>/dev/null || true
+        elif [ -f "$CREDS_FILE.bak" ]; then
+            cp "$CREDS_FILE.bak" "$CREDS_FILE" 2>/dev/null || true
+        fi
+    else
+        rm -f "$CREDS_FILE.temp_switch" 2>/dev/null || true
+    fi
+}
+trap restore_backup EXIT INT TERM
 
 echo "👉 Uma janela do navegador será aberta pelo Antigravity CLI oficial."
 echo "👉 Faça login com a NOVA CONTA GOOGLE que deseja adicionar."

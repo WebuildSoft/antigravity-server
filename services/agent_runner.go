@@ -68,6 +68,7 @@ func (s *Session) ExecuteTurn(task AgentTask) {
 	s.Lock()
 	s.Status = "running"
 	s.History = make([]interface{}, 0)
+	s.StderrBuffer = make([]string, 0)
 	s.Unlock()
 
 	s.Broadcast(map[string]interface{}{
@@ -79,10 +80,18 @@ func (s *Session) ExecuteTurn(task AgentTask) {
 		"imageUrls":      task.ImageURLs,
 	})
 
+	modelName := strings.TrimSpace(task.Model)
+	if modelName == "" {
+		modelName = GetActiveModel()
+	}
+	if modelName == "" {
+		modelName = "gemini-3.8-flash-medium"
+	}
+
 	args := []string{
 		"--input-format", "stream-json",
 		"--output-format", "stream-json",
-		"--mode", "auto",
+		"--model", modelName,
 		"--dangerously-skip-permissions",
 	}
 

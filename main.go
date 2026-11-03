@@ -126,6 +126,7 @@ func main() {
 
 	services.InitSessionManager()
 	services.InitAccountsManager()
+	services.InitActiveModel()
 	services.StartQuotaBackgroundWorker()
 
 	mux := http.NewServeMux()

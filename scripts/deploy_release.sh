@@ -487,15 +487,21 @@ EOF
 if [ "$SKIP_PUSH" = false ]; then
   echo -e "\n  ${CYAN}[6/6]${RESET} Publicando alterações no GitHub..."
 
-  # 10.1 Push no antigravity-server
+  # 10.1 Push no Mobile
+  cd "$MOBILE_REPO"
+  git add -A 2>/dev/null || true
+  git commit -m "chore(release): release v${TARGET_VERSION} (Build #${TARGET_BUILD})" 2>/dev/null || true
+  git push origin main 2>/dev/null || true
+
+  # 10.2 Push no antigravity-server
   cd "$SERVER_REPO"
-  git add bin/ version.json install.sh install.ps1 start.sh start.ps1 2>/dev/null || true
+  git add -A 2>/dev/null || true
   git commit -m "chore(release): bump to v${TARGET_VERSION} (Build #${TARGET_BUILD})" 2>/dev/null || true
   git push origin main 2>/dev/null || true
 
-  # 10.2 Push no antigravity-mobile-releases
+  # 10.3 Push no antigravity-mobile-releases
   cd "$RELEASES_REPO"
-  git add version.json README.md RELEASE_NOTES.md
+  git add -A 2>/dev/null || true
   git commit -m "chore(release): release v${TARGET_VERSION} (Build #${TARGET_BUILD})" 2>/dev/null || true
   git push origin main 2>/dev/null || true
 

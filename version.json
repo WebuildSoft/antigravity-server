@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
-  "build": 46,
-  "releasedAt": "2026-11-03T04:10:29Z",
-  "changelog": "Release oficial com compilação completa do Flutter APK e servidores com sincronização nativa de Keyring",
+  "build": 47,
+  "releasedAt": "2026-11-03T13:40:35Z",
+  "changelog": "Seletor dinâmico de modelos de IA no chat (Gemini 3.8 Flash, Claude Sonnet/Opus, GPT-OSS), acompanhamento de cotas em tempo real, healthcheck de termos TOS Google e proteção contra falhas de credenciais.",
   "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
 }

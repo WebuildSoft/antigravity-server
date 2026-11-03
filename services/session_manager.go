@@ -24,6 +24,7 @@ type AgentTask struct {
 	UserEmail  string   `json:"userEmail"`
 	MessageID  string   `json:"messageId"`
 	Prompt     string   `json:"prompt"`
+	Model      string   `json:"model"`
 	ImagePath  string   `json:"imagePath"`
 	ImagePaths []string `json:"imagePaths"`
 	ImageURL   string   `json:"imageUrl"`
@@ -41,14 +42,15 @@ func (t *AgentTask) GetOwner() string {
 
 type Session struct {
 	sync.Mutex
-	ID      string
-	Cmd     *exec.Cmd
-	Cancel  context.CancelFunc
-	Stdin   io.WriteCloser
-	History []interface{}
-	Clients map[*websocket.Conn]bool
-	Status  string
-	Queue   []AgentTask
+	ID           string
+	Cmd          *exec.Cmd
+	Cancel       context.CancelFunc
+	Stdin        io.WriteCloser
+	History      []interface{}
+	Clients      map[*websocket.Conn]bool
+	Status       string
+	Queue        []AgentTask
+	StderrBuffer []string
 }
 
 type SessionManager struct {

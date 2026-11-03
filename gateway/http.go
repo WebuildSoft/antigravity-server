@@ -64,6 +64,10 @@ func RegisterHTTPRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/version/notify", handleVersionNotify)
 	mux.HandleFunc("/api/quota", handleQuota)
 
+	// Models
+	mux.HandleFunc("/api/models", handleModels)
+	mux.HandleFunc("/api/models/active", handleActiveModel)
+
 	// Accounts & OAuth2
 	mux.HandleFunc("/api/accounts", handleAccounts)
 	mux.HandleFunc("/api/accounts/switch", handleAccountSwitch)

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -19,11 +20,13 @@ import (
 )
 
 type AccountProfile struct {
-	Email    string `json:"email"`
-	Name     string `json:"name"`
-	Picture  string `json:"picture"`
-	IsActive bool   `json:"isActive"`
-	LastUsed int64  `json:"lastUsed"`
+	Email      string `json:"email"`
+	Name       string `json:"name"`
+	Picture    string `json:"picture"`
+	IsActive   bool   `json:"isActive"`
+	LastUsed   int64  `json:"lastUsed"`
+	TOSPending bool   `json:"tosPending"`
+	TOSUrl     string `json:"tosUrl,omitempty"`
 }
 
 type GoogleAccountsState struct {
@@ -334,6 +337,8 @@ func ListAccounts() ([]AccountProfile, error) {
 				profile.Name = saved.Name
 				profile.Picture = saved.Picture
 				profile.LastUsed = saved.LastUsed
+				profile.TOSPending = saved.TOSPending
+				profile.TOSUrl = saved.TOSUrl
 			}
 		}
 
@@ -437,10 +442,35 @@ func SwitchAccount(targetEmail string) (*AccountProfile, error) {
 
 	fmt.Printf("[Accounts] Conta ativada com sucesso: %s\n", targetEmail)
 
-	// Invalidate quota cache synchronously so immediate queries do not see stale limits
+	// Invalidate quota and models cache synchronously so immediate queries do not see stale limits
 	InvalidateQuotaCache()
+	InvalidateModelsCache()
 	go func() {
-		_, _ = fetchQuotaFromAgy()
+		quotaRes, err := fetchQuotaFromAgy()
+		if err != nil || (quotaRes != nil && len(quotaRes.Items) == 0) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			cmd := exec.CommandContext(ctx, config.AppConfig.AgyBin, "-p", "/usage")
+			out, _ := cmd.CombinedOutput()
+			outLower := strings.ToLower(string(out))
+			if strings.Contains(outLower, "google tos") || strings.Contains(outLower, "not eligible") {
+				fmt.Printf("[Accounts] ⚠️ Conta %s detectada com Termos Google pendentes\n", targetEmail)
+				activeProfile.TOSPending = true
+				activeProfile.TOSUrl = "https://codeassist.google/"
+				ib, _ := json.MarshalIndent(activeProfile, "", "  ")
+				_ = os.WriteFile(targetInfoFile, ib, 0644)
+
+				accs, _ := ListAccounts()
+				if Manager != nil {
+					Manager.BroadcastAll(map[string]interface{}{
+						"type":          "account_switched",
+						"activeAccount": activeProfile,
+						"accounts":      accs,
+						"warning":       "Termos do Google Gemini Code Assist pendentes de aceite.",
+					})
+				}
+			}
+		}
 	}()
 
 	return &activeProfile, nil
@@ -597,8 +627,22 @@ except: pass
         mkdir -p "$PROFILES_DIR/$CURRENT_EMAIL"
         cp "$CREDS_FILE" "$PROFILES_DIR/$CURRENT_EMAIL/oauth_creds.json"
     fi
-    mv "$CREDS_FILE" "$CREDS_FILE.bak"
+    cp "$CREDS_FILE" "$CREDS_FILE.bak"
+    mv "$CREDS_FILE" "$CREDS_FILE.temp_switch"
 fi
+
+restore_backup() {
+    if [ ! -s "$CREDS_FILE" ]; then
+        if [ -f "$CREDS_FILE.temp_switch" ]; then
+            mv "$CREDS_FILE.temp_switch" "$CREDS_FILE" 2>/dev/null || true
+        elif [ -f "$CREDS_FILE.bak" ]; then
+            cp "$CREDS_FILE.bak" "$CREDS_FILE" 2>/dev/null || true
+        fi
+    else
+        rm -f "$CREDS_FILE.temp_switch" 2>/dev/null || true
+    fi
+}
+trap restore_backup EXIT INT TERM
 
 echo "👉 Uma janela do navegador será aberta pelo Antigravity CLI oficial."
 echo "👉 Faça login com a NOVA CONTA GOOGLE que deseja adicionar."

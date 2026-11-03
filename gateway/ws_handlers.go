@@ -607,10 +607,13 @@ func (c *ClientConn) handleSend(data map[string]interface{}, isRemote bool) {
 		taskUserEmail = c.authUser.Email
 	}
 
+	modelStr, _ := data["model"].(string)
+
 	task := services.AgentTask{
 		UserEmail:  taskUserEmail,
 		MessageID:  msgID,
 		Prompt:     userPrompt,
+		Model:      modelStr,
 		ImagePath:  firstImagePath,
 		ImagePaths: imagePaths,
 		ImageURL:   firstImageURL,
