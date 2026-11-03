@@ -78,13 +78,29 @@ if [ -z "$TARGET_BUILD" ]; then
   TARGET_BUILD=$((CURRENT_BLD + 1))
 fi
 
-# 3.1 Geração Inteligente de Changelog e Release Notes via IA
+# 3.1 Resolução das Release Notes (Prioridade 1: .pending_release.json | Prioridade 2: IA via Git)
+PENDING_FILE="$DOCS_DIR/.pending_release.json"
 AI_NOTES_JSON="/tmp/antigravity_release_notes.json"
 AI_MOBILE_HL=""
 AI_SERVER_HL=""
 
-if [ "$SKIP_AI" = false ]; then
-  echo -e "  ${CYAN}●${RESET} ${BOLD}IA Engine:${RESET} Analisando commits recentes com a IA Antigravity..."
+HAS_PENDING=false
+if [ -f "$PENDING_FILE" ]; then
+  P_SHORT=$(python3 -c "import json; d=json.load(open('$PENDING_FILE')); print(d.get('short_changelog','').strip())" 2>/dev/null || true)
+  P_MOB=$(python3 -c "import json; d=json.load(open('$PENDING_FILE')); m=d.get('mobile_highlights',[]); print('\n'.join(m) if isinstance(m, list) else m.strip())" 2>/dev/null || true)
+  P_SRV=$(python3 -c "import json; d=json.load(open('$PENDING_FILE')); s=d.get('server_highlights',[]); print('\n'.join(s) if isinstance(s, list) else s.strip())" 2>/dev/null || true)
+
+  if [ -n "$P_SHORT" ] || [ -n "$P_MOB" ] || [ -n "$P_SRV" ]; then
+    HAS_PENDING=true
+    echo -e "  ${GREEN}●${RESET} ${BOLD}Rascunho Ativo:${RESET} Carregando Release Notes acumuladas (.pending_release.json)"
+    [ -z "$CHANGELOG_MSG" ] && [ -n "$P_SHORT" ] && CHANGELOG_MSG="$P_SHORT"
+    [ -n "$P_MOB" ] && AI_MOBILE_HL="$P_MOB"
+    [ -n "$P_SRV" ] && AI_SERVER_HL="$P_SRV"
+  fi
+fi
+
+if [ "$HAS_PENDING" = false ] && [ "$SKIP_AI" = false ]; then
+  echo -e "  ${CYAN}●${RESET} ${BOLD}IA Engine:${RESET} Analisando commits e diffs com a IA Antigravity..."
   GEN_SCRIPT="$SERVER_REPO/scripts/generate_release_notes.py"
   if [ -f "$GEN_SCRIPT" ]; then
     python3 "$GEN_SCRIPT" \
@@ -555,6 +571,18 @@ if [ "$SKIP_PUSH" = false ]; then
     --clobber --repo WebuildSoft/antigravity-mobile-releases
 
   echo -e "  ${GREEN}●${RESET} GitHub Release atualizada com sucesso!"
+
+  # Reset do buffer de Release Notes para a próxima versão
+  if [ -f "$PENDING_FILE" ]; then
+    cat <<EOF > "$PENDING_FILE"
+{
+  "short_changelog": "",
+  "mobile_highlights": [],
+  "server_highlights": []
+}
+EOF
+    echo -e "  ${GREEN}●${RESET} Buffer .pending_release.json resetado para o próximo ciclo."
+  fi
 fi
 
 echo ""

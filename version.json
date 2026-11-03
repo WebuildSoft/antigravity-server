@@ -1,7 +1,7 @@
 {
   "version": "1.4.1",
-  "build": 48,
-  "releasedAt": "2026-11-03T14:12:16Z",
-  "changelog": "Correção do seletor de modelos de IA no chat (toque imediato, bottom sheet com altura dinâmica, modelos pré-carregados e sincronização WebSocket)",
+  "build": 49,
+  "releasedAt": "2026-11-03T16:11:27Z",
+  "changelog": "Ícones adaptativos com fundo transparente no Android e refinamento do seletor de modelos de IA no chat.",
   "downloadUrl": "https://github.com/WebuildSoft/antigravity-mobile-releases/releases/latest/download/app-release.apk"
 }
